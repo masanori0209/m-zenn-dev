@@ -125,21 +125,25 @@ flowchart LR
 
 サポート引き継ぎプロファイルでは、たとえば次のスロットを要求します。
 
-- `communication_status`
-- `scope`
-- `authority`
-- `fallback_plan`
-- `escalation_path`
-- `customer_facing_wording`
+| スロット | 意味 |
+|---|---|
+| `communication_status` | 顧客や関係者に、どこまで説明・合意済みか |
+| `scope` | 「今回だけ」「対象範囲」がどこまでを指すか |
+| `authority` | 後任者が顧客向けに約束・回答してよい範囲 |
+| `fallback_plan` | 予定した対応が失敗した場合の代替手段 |
+| `escalation_path` | 判断に迷ったとき、誰・どのチームへ上げるか |
+| `customer_facing_wording` | 顧客にそのまま出してよい説明文・表現 |
 
 技術運用引き継ぎプロファイルでは、要求スロットが変わります。
 
-- `rationale`
-- `technical_constraint`
-- `implementation_scope`
-- `trigger_for_reconsideration`
-- `related_issue`
-- `failure_modes`
+| スロット | 意味 |
+|---|---|
+| `rationale` | なぜその判断・運用方針になったのか |
+| `technical_constraint` | 技術的な制約や前提条件 |
+| `implementation_scope` | 実装・運用対象と、対象外の境界 |
+| `trigger_for_reconsideration` | どの条件になったら方針を見直すか |
+| `related_issue` | 参照すべきIssue、Runbook、設計メモ |
+| `failure_modes` | 想定される失敗パターンや症状 |
 
 同じ記憶でも、顧客に説明する人、技術運用を引き継ぐ人、商談を引き継ぐ人では、必要な前提が変わります。今回一番やりたかったのは、この違いをRAGの後段で見えるようにすることでした。
 
