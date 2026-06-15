@@ -95,6 +95,69 @@ flowchart LR
 
 同じ記憶でも、顧客に説明する人、技術運用を引き継ぐ人、商談を引き継ぐ人では、必要な前提が異なるのがポイントです。
 
+## ライブラリとしての利用イメージ
+
+実アプリに組み込む場合、HandoverGapは「RAGの回答器」そのものというより、**回答前に引き継ぎ可能性を検査するゲート**として置くイメージです。
+
+```mermaid
+flowchart TD
+    U[後任者の質問] --> A[既存RAG / Memory検索]
+    A --> M[記憶と関連証拠]
+    M --> H[HandoverGapDetector]
+    P[引き継ぎプロファイル<br/>support / engineering / sales] --> H
+    H --> S{transferability}
+    S -- transferable --> R[回答を生成して提示]
+    S -- blocked --> Q[不足スロットと確認質問を提示]
+    H --> T[(TiDB監査ログ)]
+    T --> O[slot_fill_attempts<br/>context_gaps<br/>transfer_assessments]
+```
+
+最小構成では、同梱データセットを読み込んで検出器を呼ぶだけです。
+
+```python
+from handovergap import HandoverGapDetector, InMemoryStore
+
+store = InMemoryStore.from_builtin_dataset()
+detector = HandoverGapDetector(store=store)
+
+result = detector.detect(
+    scenario_id="S001",
+    successor_role="CS",
+)
+
+if result.transferability_status == "blocked":
+    for question in result.questions:
+        print(question.question)
+else:
+    print("transferable")
+```
+
+アプリ側では、この結果をそのまま「回答してよい / 追加確認が必要」の分岐に使えます。
+
+```mermaid
+sequenceDiagram
+    participant App as 業務アプリ
+    participant RAG as 既存RAG
+    participant HG as HandoverGap
+    participant DB as TiDB
+    participant User as 後任者
+
+    User->>App: この顧客にはどう回答すればよい？
+    App->>RAG: 関連する記憶と証拠を検索
+    RAG-->>App: memory + evidence
+    App->>HG: scenario / profile / evidenceを評価
+    HG->>DB: slot fill / gap / assessmentを保存
+    alt 必要スロットが埋まっている
+        HG-->>App: transferable
+        App-->>User: 回答案を提示
+    else 暗黙前提が足りない
+        HG-->>App: blocked + clarification questions
+        App-->>User: 確認質問を提示
+    end
+```
+
+つまり、既存RAGを置き換えるのではなく、RAGが返した記憶を「後任者が安全に使える形か？」で検査します。TiDBには、その判断過程を監査ログとして残します。
+
 ## Naive RAG は答え、HandoverGap は止まる
 
 CLIでは、同梱のサンプルシナリオを使って検出できます。
