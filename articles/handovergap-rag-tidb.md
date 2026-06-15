@@ -537,13 +537,20 @@ handovergap evaluate --compare
 
 ここで大事なのは、`1.00` を本番精度の主張として読まないことです。
 
-ここは少し恥ずかしい話ですが、後続の監査で、以前の評価にはリークがあることが分かりました。具体的には、検出器やbaselineが評価専用ラベルを参照してしまう経路がありました。この経路は修正済みですが、同梱データセットは依然として `required_slots - provided_slots == gold_gaps` という構造に強く揃っています。
+mini datasetは、HandoverGapの基本動作を再現できるように、`required_slots - provided_slots` と `gold_gaps` がかなり素直に対応する形で作っています。そのため、mini datasetの `Tacit Gap Recall = 1.00` は、独立した一般化性能ではなく、**設計したスロット/gapを実装が拾えているかの整合性検査**として見るのが近いです。
 
-そのため、mini datasetの `Tacit Gap Recall = 1.00` は、独立した一般化性能ではなく、**設計したスロット/gapを実装が拾えているかの整合性検査**として扱うべきです。
+ここはシナリオ数を増やすだけでは解決しません。100件に増やしても、`provided_slots` と `gold_gaps` が同じルールから作られていれば、やはり高い数字が出ます。必要なのは件数だけでなく、入力側のスロット充足と評価側のgold gapを分離し、曖昧な証拠や過剰な確認質問も評価できることです。
 
-ここはシナリオ数を増やすだけでは解決しません。100件に増やしても、`provided_slots` と `gold_gaps` が同じルールから作られていれば、やはり高い数字が出ます。必要なのは件数だけでなく、独立したannotation、曖昧な証拠、過剰な確認質問を罰する指標です。
+そこで、評価データは役割を分けました。
 
-そこで、`provided_slots` と `gold_gaps` の構造的な一致を崩した adversarial split も追加しました。安全なのにスロット抽出が一部欠けるケースと、危険なのにスロットが埋まったように見えるケースを混ぜています。
+| Split | 目的 | 位置づけ |
+|---|---|---|
+| mini | 基本動作の再現性を見る | 実装の整合性検査 |
+| adversarial | 構造的に揃った評価を崩す | 失敗条件を見る |
+| sanitized | 匿名化された業務メモ風の文脈で見る | 実データに近い書きぶりでのスモーク評価 |
+| holdout | slot fillingの揺れを見る | LLMや抽出方針への感度を見る |
+
+まず、`provided_slots` と `gold_gaps` の構造的な一致を崩した adversarial split を用意しました。安全なのにスロット抽出が一部欠けるケースと、危険なのにスロットが埋まったように見えるケースを混ぜています。
 
 ```bash
 handovergap evaluate --dataset adversarial --compare
@@ -555,11 +562,11 @@ handovergap evaluate --dataset adversarial --compare
 | hybrid_rag | 6 | 0.25 | 0.67 | 0.25 | 1.00 | 1.00 | 0.00 |
 | handovergap | 6 | 0.38 | 0.67 | 0.38 | 1.00 | 1.00 | 0.00 |
 
-この結果は、mini datasetよりずっと厳しいです。HandoverGapが壊れるケースを入れたので、`Tacit Gap Recall` は0.38まで下がっています。一方で `0.1.5` では、明示的な証拠にあるスロットを充足済みとして扱う evidence-backed slot reconciliation を入れたことで、安全な記憶に不要な確認質問を出す `False Clarification Rate` は、以前の0.67から0.00まで下がりました。
+この結果は、mini datasetよりずっと厳しいです。HandoverGapが壊れるケースを入れているため、`Tacit Gap Recall` は0.38まで下がっています。一方で、明示的な証拠にあるスロットは充足済みとして扱うため、安全な記憶に不要な確認質問を出す `False Clarification Rate` は0.00でした。
 
-つまり、adversarial splitは「全部解けた」と言うための表ではありません。むしろ、Recallの弱さは残したまま、過剰質問という分かりやすい失敗だけを一つ潰した、という読み方が正しいです。
+つまり、adversarial splitは「全部解けた」と言うための表ではありません。過剰質問は抑えられている一方で、曖昧な証拠をどうgapとして拾うかには課題が残っています。
 
-このあたりは、記事として都合のよい数字だけ出すより、どこまでが検証できていて、どこからがまだ怪しいのかを分けて書いたほうがよいかなと思っています。
+そのため、miniやsanitizedの高い数値だけでなく、adversarialの低いRecallもセットで見る必要があります。
 
 加えて、実データは使わずに、より現場の記録に近い書きぶりへ寄せた `sanitized` split も追加しました。これは実在の会社、社員、顧客、チケット、商談データを含みません。ただし、CRMメモ、インシデントタイムライン、Runbook、リリースチェックリスト、商談レビューのような匿名化済み業務記録を想定して書いています。
 
@@ -607,11 +614,9 @@ python harness/validation/openai_slot_filling_check.py --dataset holdout --persi
 | handovergap/openai-slot-fill/gpt-5-mini | 6 | 0.45 | 0.33 | 0.67 | 0.50 |
 | handovergap/openai-slot-fill/gpt-5-mini/gpt5_strict | 6 | 1.00 | 0.67 | 1.00 | 1.00 |
 
-実LLMでは、`gpt-4.1-mini` は単純な`optimistic` profileよりTacit Gap Recallが改善しました。一方でUnsafe Transfer Preventionは0.33、Blocked Precisionは0.50まで落ちました。
+実LLMでは、モデルとprompt profileによって結果が大きく変わりました。`gpt-4.1-mini` はTacit Gap Recallが0.91でしたが、Unsafe Transfer Preventionは0.33、Blocked Precisionは0.50です。`gpt-5-mini` の標準promptではTacit Gap Recallが0.45まで下がり、契約影響や判断理由を楽観的に埋めすぎるケースがありました。
 
-さらに `gpt-5-mini` では、同じpromptでもTacit Gap Recallが0.45まで下がりました。正直、ここは少し意外でした。詳細ログを見ると、LLMが契約影響や判断理由を楽観的に埋めすぎるケースと、安全なhandoverでも `needs_clarification` に寄るケースがありました。
-
-そこで `gpt-5-mini` 向けに、スロットごとの受理条件、未確定情報をfilledにしない条件、合成holdoutの証拠要約をどう扱うかをpromptへ追加しました。その結果、Tacit Gap Recallは1.00まで改善しました。
+一方で、スロットごとの受理条件、未確定情報をfilledにしない条件、合成holdoutの証拠要約をどう扱うかを明示した `gpt5_strict` profileでは、Tacit Gap Recallは1.00でした。
 
 ただし、このpromptはholdoutのannotation protocolに近づいています。本番精度ではなく、**モデル別prompt調整が効く**という証拠として扱うべきです。また安全ケース `U006` では不要な `timeline_confidence` gapを出しており、False Clarification Rateのような過剰質問を見る指標を併用しないと、見かけのRecallだけでは改善を誤解しやすいです。
 
@@ -619,7 +624,7 @@ python harness/validation/openai_slot_filling_check.py --dataset holdout --persi
 
 費用は小さい一方、結果の揺れは大きいです。
 
-なので現時点では、「意味的スロット抽出は効く可能性があるが、モデル選択、prompt、ブロック判定ポリシー、スロット定義、評価指標にはまだ改善余地が大きい」という受け取り方をしています。
+この結果からは、「意味的スロット抽出は効く可能性があるが、モデル選択、prompt、ブロック判定ポリシー、スロット定義、評価指標にはまだ改善余地が大きい」と見ています。
 
 ## 実装して分かったこと
 
@@ -709,7 +714,7 @@ handovergap serve
 
 ## 限界
 
-現時点のMVPには、はっきりした限界があります。ここはかなり重要なので、先に書いておきます。
+このMVPには、はっきりした限界があります。ここはかなり重要なので、先に書いておきます。
 
 - HandoverGapBench miniとholdoutは合成データです
 - sanitized splitも、実データではなく匿名化済み業務メモ風に書いた合成データです
