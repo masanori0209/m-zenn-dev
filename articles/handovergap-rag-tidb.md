@@ -757,6 +757,4 @@ handovergap serve
 
 検証用に作った架空データ中心ではありますが、`pip install` で試せるゲート実装、TiDBに残る監査ログ、adversarial splitでの失敗条件、TiDB Cloud上での監査SQL p50/p95測定までは確認できました。
 
-最後に、このプロジェクトの一番短い説明で締めます。
-
-> Naive RAGは答える。HandoverGap RAGは、足りない前提を聞き返す。
+Naive RAGは答えます。HandoverGap RAGは、足りない前提を聞き返します。業務の引き継ぎでは、この「いったん聞き返す」余地をちゃんと作っておくのが大事なのではないか、というのが今回作ってみて一番感じたところです。
