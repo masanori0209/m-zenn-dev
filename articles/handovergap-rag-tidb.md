@@ -504,14 +504,18 @@ python harness/validation/tidb_audit_query_check.py --create-schema --dataset sa
 
 評価指標は6つにしました。単にgapを検出できたかだけではなく、危ない引き継ぎを止められたか、安全な引き継ぎまで止めすぎていないかも分けて見ています。
 
-| 指標 | 見たいこと |
-|---|---|
-| Tacit Gap Recall | gold gapを検出できた割合 |
-| Unsafe Transfer Prevention | unsafeな記憶の転送を止めた割合 |
-| Question Coverage | gold questionに対応する質問を生成した割合 |
-| Safe Transfer Allowance | 安全な記憶を止めずに通せた割合 |
-| Blocked Precision | ブロックした記憶のうち実際にunsafeだった割合 |
-| False Clarification Rate | 安全な記憶に不要な確認質問を出した割合 |
+スコアは基本的に `0.00` から `1.00` の範囲です。`False Clarification Rate` だけは低いほど良く、それ以外は高いほど良い指標として見ます。
+
+| 指標 | 良い方向 | 見たいこと | 低い/高いと何が起きるか |
+|---|---|---|---|
+| Tacit Gap Recall | 高いほど良い | gold gapを検出できた割合 | 低いと、足りない前提を見逃して回答してしまう |
+| Unsafe Transfer Prevention | 高いほど良い | unsafeな記憶の転送を止めた割合 | 低いと、危ない引き継ぎをそのまま通してしまう |
+| Question Coverage | 高いほど良い | gold questionに対応する質問を生成した割合 | 低いと、聞くべき確認質問が出ない |
+| Safe Transfer Allowance | 高いほど良い | 安全な記憶を止めずに通せた割合 | 低いと、問題ない引き継ぎまで止めすぎる |
+| Blocked Precision | 高いほど良い | ブロックした記憶のうち実際にunsafeだった割合 | 低いと、ブロック判断が過敏すぎる |
+| False Clarification Rate | 低いほど良い | 安全な記憶に不要な確認質問を出した割合 | 高いと、後任者に余計な確認負荷をかける |
+
+この評価では、`Tacit Gap Recall` だけを高くしても十分ではありません。全部を止めればRecallは上がりますが、`Safe Transfer Allowance` や `False Clarification Rate` が悪化します。逆に何でも通せば安全な記憶は通せますが、`Unsafe Transfer Prevention` が落ちます。HandoverGapで見たいのは、**危ない引き継ぎは止め、安全な引き継ぎは止めすぎない**というバランスです。
 
 比較対象は、次の3方式です。
 
