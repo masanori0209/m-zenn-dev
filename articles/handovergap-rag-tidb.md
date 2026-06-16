@@ -350,7 +350,25 @@ python harness/validation/tidb_audit_query_check.py \
   --iterations 10
 ```
 
-結果は次の通りです。
+結果は次の通りです。下表は **TiDB に書き込んだ行数** と **監査 SQL の実行時間** です。HandoverGap が「検索結果」だけでなく **判断過程** をどれだけ TiDB に残すかを示しています。
+
+:::details 項目の見方（TiDB 書き込み量・監査 SQL）
+
+| 項目 | 意味 |
+|---|---|
+| `scenarios persisted` / `generated scenarios persisted` | 引き継ぎシナリオ（記憶 1 件 × profile/task）を TiDB に保存した件数 |
+| `source events` | 元証拠（Slack / Issue / CRM メモ等）の件数 |
+| `memory items` | 引き継ぎ対象の記憶本文（1 シナリオ = 通常 1 行） |
+| `memory chunks` | Vector / 全文検索用に分割したチャンク件数 |
+| `slot-fill attempts` | 必須スロットごとに「証拠で埋まったか」を試行した記録 |
+| `context gaps` | 不足と判定した暗黙前提（gap）の件数 |
+| `clarification questions` | gap から生成した確認質問の件数 |
+| `transfer assessments` | 最終的な引き継ぎ可否（`transferable` / `blocked`）の判定件数 |
+| `audit query result rows` | 監査 SQL が返した行数。1 件の blocked assessment が複数 gap 行に広がるため、通常は `context gaps` に近い |
+| `insert duration` | TiDB への一括投入にかかった時間（大規模 run のみ） |
+| `p50` / `p95 audit query latency` | 監査 SQL を繰り返し実行したときのレイテンシ（50 / 95 パーセンタイル）。Developer Tier 上の参考値 |
+
+:::
 
 | 項目 | 値 |
 |---|---:|
@@ -392,9 +410,7 @@ python harness/validation/tidb_workload_audit_check.py \
   --local-scale 100,1000,10000
 ```
 
-最初は大きめの件数を1 transactionで投入しようとして、Developer Tier側でクライアント接続が切れました。そこでbatch persistする形にしています。ここは実装してみないと気づきにくい、地味だけど実運用寄りの学びでした。
-
-まず、`memory_chunks` も含めて10,000件の生成シナリオを保存しました。
+まず、`memory_chunks` も含めて10,000件の生成シナリオを保存しました。各項目の意味は、上の **項目の見方** と同じです。
 
 | 項目 | 値 |
 |---|---:|
@@ -411,7 +427,7 @@ python harness/validation/tidb_workload_audit_check.py \
 | p50 audit query latency | 1,374.010 ms |
 | p95 audit query latency | 1,478.298 ms |
 
-さらに、監査テーブル側だけに寄せて100,000件も試しました。こちらはfree tierのストレージを無駄に増やさないため、Vector列を持つ `memory_chunks` は入れていません。
+さらに、監査テーブル側だけに寄せて100,000件も試しました。こちらはfree tierのストレージを無駄に増やさないため、Vector列を持つ `memory_chunks` は入れていません（そのため 0 行）。それ以外の項目は **項目の見方** と同じです。
 
 | 項目 | 値 |
 |---|---:|
@@ -432,19 +448,36 @@ python harness/validation/tidb_workload_audit_check.py \
 
 ただ、6件の疎通確認ではなく、数十万行の `slot_fill_attempts`、`context_gaps`、`clarification_questions`、`transfer_assessments` をTiDBに保存し、blocked transferを同じSQLで説明するところまでは確認できました。今回見たかったのはここです。
 
-監査結果の一部は次のようになります。生成データなので内容は単純ですが、どの記憶、どのprofile、どのslot不足、どの質問に落ちたかを1本のSQLで辿れます。
+監査SQLで見たいのは、行数が増えても **1つの blocked assessment が複数の不足スロット・確認質問に枝分かれして追えること** です。生成ワークロード100件を同じSQLで読んだ例を載せます（10k/100kでもクエリは同じで、返る行数だけが増えます）。
 
 | Scenario | Profile | Missing slot | Severity | Evidence | Question |
 |---|---|---|---|---|---|
-| W9549 | Sales | `customer_expectation` | MEDIUM | `generated_note` | 顧客の期待値はどの状態に調整されていますか？ |
-| W9501 | Sales | `customer_expectation` | MEDIUM | `generated_note` | 顧客の期待値はどの状態に調整されていますか？ |
-| W9531 | Sales | `customer_expectation` | MEDIUM | `generated_note` | 顧客の期待値はどの状態に調整されていますか？ |
-| W99921 | Sales | `customer_expectation` | MEDIUM | `generated_note` | 顧客の期待値はどの状態に調整されていますか？ |
-| W99933 | Sales | `customer_expectation` | MEDIUM | `generated_note` | 顧客の期待値はどの状態に調整されていますか？ |
+| W0100 | CS | `authority` | HIGH | `generated_note` | このプロファイルが回答または判断してよい範囲はどこまでですか？ |
+| W0100 | CS | `escalation_path` | HIGH | `generated_note` | 問題が起きた場合のエスカレーション先は誰ですか？ |
+| W0100 | CS | `fallback_plan` | HIGH | `generated_note` | 想定外の場合の代替手段は何ですか？ |
+| W0100 | CS | `customer_facing_wording` | MEDIUM | `generated_note` | 外部向けにはどの表現で説明すべきですか？ |
+| W0100 | CS | `scope` | MEDIUM | `generated_note` | この判断の適用範囲はどこまでですか？ |
+| W0099 | Sales | `customer_expectation` | MEDIUM | `generated_note` | 顧客の期待値はどの状態に調整されていますか？ |
+| W0095 | Engineer | `failure_modes` | MEDIUM | `generated_note` | 想定される失敗パターンと検知方法は何ですか？ |
 
-この表は精度評価ではなく、監査可能性の確認です。生成ワークロードは `provided_slots` から機械的にgapが決まるので、「本番で正しくgapを見つけられる」証明には使いません。一方で、TiDBに判断過程を保存して、行数が増えてもどの記憶・どのprofile・どの不足slot・どの質問に至ったかをJOINで追えることは示せます。
+同じ `W0100` が5行に分かれているのが、この監査パスの要点です。1記憶・1 profile の blocked transfer から、不足スロットごとの severity、参照した証拠、確認質問まで横断できます。
 
-ローカルでは、100、1,000、10,000件相当まで監査行の増え方も見ています。
+:::message alert
+生成ワークロードは `provided_slots` を周期的に決める **スケール検証用データ** です。質問文はスロット固定テンプレート、証拠は `generated_note` 1件のみなので、25,000行をそのまま `ORDER BY ... LIMIT 8` すると、同じ Sales / `customer_expectation` / 同じ質問が並びます。これは監査JOINのバグではなく、サンプルの取り方とデータ生成の単純さによる見え方です。内容の多様性は、上の sanitized split や `handovergap audit-example`（S001）を見てください。
+:::
+
+この表は精度評価ではなく、監査可能性の確認です。「本番で正しく gap を見つけられる」証明には使いません。一方で、TiDB に判断過程を保存し、行数が増えてもどの記憶・どの profile・どの不足 slot・どの質問に至ったかを JOIN で追えることは示せます。
+
+ローカルでは、100、1,000、10,000件相当まで監査行の増え方も見ています。TiDB には書かず、同じ detector で監査行をメモリ上だけ生成したときの件数と所要時間です。
+
+| 項目 | 意味 |
+|---|---|
+| `Scenarios` | 生成した引き継ぎシナリオ数 |
+| `Assessments` | `transfer_assessments` 相当の判定件数（通常 1 シナリオ = 1 件） |
+| `Gaps` | 検出した `context_gaps` 行数 |
+| `Questions` | 生成した `clarification_questions` 行数 |
+| `Blocked` | `blocked` と判定した assessment 件数 |
+| `p50` / `p95 local ms` | 上記行をローカル生成する処理時間（ms）。TiDB クエリ時間ではない |
 
 | Scenarios | Assessments | Gaps | Questions | Blocked | p50 local ms | p95 local ms |
 |---:|---:|---:|---:|---:|---:|---:|
@@ -462,6 +495,16 @@ handovergap workload-benchmark --scenarios 1000 --iterations 2
 
 手元では次の結果でした。
 
+| 項目 | 意味 |
+|---|---|
+| `scenarios` | 生成ワークロードのシナリオ数 |
+| `iterations` | 同じ件数を何回繰り返して計測したか |
+| `transfer_assessments_per_run` | 1 回あたりの引き継ぎ可否判定件数 |
+| `context_gaps_per_run` | 1 回あたりの gap 行数 |
+| `clarification_questions_per_run` | 1 回あたりの確認質問行数 |
+| `blocked_assessments_per_run` | 1 回あたりの blocked 件数 |
+| `p50_ms` / `p95_ms` | 1 回分のローカル生成時間（ms） |
+
 | Metric | Value |
 |---|---:|
 | scenarios | 1000 |
@@ -478,6 +521,18 @@ handovergap workload-benchmark --scenarios 1000 --iterations 2
 ```bash
 handovergap audit-benchmark --dataset all --iterations 100
 ```
+
+同梱データセット全体についても、監査行が 1 回の評価 run でどれだけ作られるかを確認しています。
+
+| 項目 | 意味 |
+|---|---|
+| `Scenarios` | 同梱 split 全体のシナリオ数 |
+| `Transfer assessments / run` | 1 回の評価で作られる引き継ぎ判定件数 |
+| `Blocked assessments / run` | そのうち blocked になった件数 |
+| `Context gap rows / run` | 1 回で作られる gap 行数 |
+| `Blocked context gap rows / run` | blocked シナリオに紐づく gap 行数 |
+| `Clarification question rows / run` | 1 回で作られる確認質問行数 |
+| `p50` / `p95 local materialization ms / run` | 監査行をローカル生成する時間（ms） |
 
 | Metric | Value |
 |---|---:|
