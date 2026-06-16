@@ -462,10 +462,6 @@ python harness/validation/tidb_workload_audit_check.py \
 
 同じ `W0100` が5行に分かれているのが、この監査パスの要点です。1記憶・1 profile の blocked transfer から、不足スロットごとの severity、参照した証拠、確認質問まで横断できます。
 
-:::message alert
-生成ワークロードは `provided_slots` を周期的に決める **スケール検証用データ** です。質問文はスロット固定テンプレート、証拠は `generated_note` 1件のみなので、25,000行をそのまま `ORDER BY ... LIMIT 8` すると、同じ Sales / `customer_expectation` / 同じ質問が並びます。これは監査JOINのバグではなく、サンプルの取り方とデータ生成の単純さによる見え方です。内容の多様性は、上の sanitized split や `handovergap audit-example`（S001）を見てください。
-:::
-
 この表は精度評価ではなく、監査可能性の確認です。「本番で正しく gap を見つけられる」証明には使いません。一方で、TiDB に判断過程を保存し、行数が増えてもどの記憶・どの profile・どの不足 slot・どの質問に至ったかを JOIN で追えることは示せます。
 
 ローカルでは、100、1,000、10,000件相当まで監査行の増え方も見ています。TiDB には書かず、同じ detector で監査行をメモリ上だけ生成したときの件数と所要時間です。
