@@ -6,11 +6,11 @@ topics: ["amivoice", "minecraft", "aiagent", "java", "fabric"]
 published: true
 ---
 
-:::message alert
+:::message
 この記事は、Minecraft を声で操作する自作 MOD の開発記録です。
-平成一桁生まれが「ピカチュウげんきでちゅう」のスイカ割りを思い出しながら書いています。
+平成一桁生まれが、昔遊んだ「ピカチュウげんきでちゅう」のスイカ割りをふと思い出しながら書いています。
 
-ただし、懐古だけの記事ではありません。
+とはいえ、思い出話だけの記事ではありません。
 AmiVoice API、音声入力のノイズ対策、生成 AI fallback、Minecraft 内での実行計画をどう分けたか、という実装の話をします。
 :::
 
