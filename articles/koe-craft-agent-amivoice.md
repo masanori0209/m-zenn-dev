@@ -1,54 +1,112 @@
 ---
-title: "声だけで Minecraft を動かす：AmiVoice × 生成AIで作るサバイバル音声エージェント"
+title: "マイクラを声で動かそうとしたら令和の「ピカチュウげんきでちゅう」になった話"
 emoji: "⛏️"
 type: "tech"
 topics: ["amivoice", "minecraft", "aiagent", "java", "fabric"]
-published: false
+published: true
 ---
 
-## 作ったもの
+:::message alert
+この記事は、Minecraft を声で操作する自作 MOD の開発記録です。
+平成一桁生まれが「ピカチュウげんきでちゅう」のスイカ割りを思い出しながら書いています。
 
-[KoeCraft Agent](https://github.com/masanori0209/koe-craft-agent) は、Minecraft Java Edition サバイバル向けの **日本語音声ファースト** エージェント MOD です。
-
-たとえば、プレイヤーがこう話します。
-
-```text
-土を掘って
-```
-
-KoeCraft は Minecraft 内で音声を録音し、AmiVoice API で認識し、発話を Goal に変換し、サバイバル操作として実行します。
-
-![KoeCraft Voice が発話を検知している画面](/images/koecraft-voice-speaking.jpg)
-
-![音声操作後にタスクが進んだ画面](/images/koecraft-task-complete.jpg)
-
-今回の記事で一番書きたいのは、Minecraft 攻略 AI そのものではありません。
-
-主題は、**音声認識と生成 AI を組み合わせたアプリで、話し言葉をどう安全に実行可能な手順へ変換するか** です。
-
-:::message
-この記事は Minecraft 公式プロジェクトではありません。Minecraft 本体や改造クライアントの配布も行っていません。AmiVoice API と生成 AI を組み合わせた **音声体験の実装知見** を共有するための記事です。
+ただし、懐古だけの記事ではありません。
+AmiVoice API、音声入力のノイズ対策、生成 AI fallback、Minecraft 内での実行計画をどう分けたか、という実装の話をします。
 :::
 
-リポジトリ: https://github.com/masanori0209/koe-craft-agent
+---
 
-<!-- TODO: 公開前にここへ 30〜60 秒の動画を埋め込む。構成: Vキー → SPEAKING → AmiVoice認識 → Goal/Task → Minecraft内で実行 -->
+## 🎙️ 物語のはじまり
+
+Minecraft を声で動かしたい。
+
+最初は、ただそれだけだった。
+
+キーボードもマウスも使わずに、
+
+> 「まっすぐ進んで」
+> 「木のツルハシ作って」
+> 「石のツルハシ作って」
+
+と言ったら、画面の中の Steve が動いてくれたら面白い。
+
+そう思って [KoeCraft Agent](https://github.com/masanori0209/koe-craft-agent) という Fabric MOD を作り始めた。
+
+でも、実際にデモを撮ってみると、思っていた「未来の音声操作」とは少し違った。
+
+まっすぐ進む。
+たしかに進む。
+
+木のツルハシを作ろうとする。
+それっぽく動き始める。
+
+でも、作業台を開こうとして少し距離が足りなかったり、向きがずれていたりする。
+認識候補を見ながら、
+
+> 「今の、そう聞こえたかー」
+
+となる瞬間がある。
+
+そのとき、急に思い出した。
+
+NINTENDO 64 の「ピカチュウげんきでちゅう」だ。
+
+小学生のころ、スイカ割りが本当に難しかった。
+
+画面の前で、
+
+> 「右！」
+> 「左！」
+> 「そこ！」
+
+みたいなことを一生懸命言っていた気がする。
+
+こっちは必死なのに、ピカチュウはちょっと違う方向に行く。
+伝わっているような、伝わっていないような。
+
+あのもどかしさ。
+
+KoeCraft のデモを見返したとき、
+
+> 「あ、これ、令和のピカチュウげんきでちゅうだ」
+
+と思ってしまった。
+
+こちらは Minecraft なので、相手はピカチュウではない。
+画面の中にいるのは、いつもの Steve だ。
+
+いや、Steve のスキンをピカチュウにしておけば、もう少し可愛げがあったかもしれない。
+
+でも、声で相棒にお願いして、ちょっと伝わったり、ちょっと伝わらなかったりする感じは、妙に懐かしかった。
 
 ---
 
-## この記事で扱う課題
+## ⛏️ 作ったもの
 
-音声入力アプリでは、単に Speech-to-Text ができても、そのまま実行できるわけではありません。
+KoeCraft Agent は、Minecraft Java Edition サバイバル向けの日本語音声ファースト MOD です。
 
-特にゲーム操作や業務画面操作のように、実行先の状態が変わるアプリでは、次の課題が出ます。
+プレイヤーがこう話す。
 
-- 音声認識結果をそのまま LLM に渡すと、解釈が揺れる
-- LLM に操作手順を直接出させると、危険な操作や未対応操作が混ざる
-- 曖昧な日本語を、アプリ内部の Goal や Action に落とす必要がある
-- live API 前提で開発すると、失敗の再現や回帰検証が重くなる
-- マイク状態、言い直し、中断を曖昧にすると、ユーザーが安心して操作できない
+```text
+石のツルハシ作って
+```
 
-KoeCraft Agent では、この課題に対して次の分担で向き合っています。
+MOD は Minecraft 内でマイク入力を録音し、AmiVoice API に投げる。
+返ってきた認識結果を Goal に変換し、Minecraft の状態を見ながら実行手順に落とす。
+
+先に、デモの雰囲気を置いておく。
+
+![声で石のツルハシ作成まで進めるデモ](/images/koecraft-demo-stone-pickaxe.gif)
+
+画面上では、Steve が村の近くを歩き、作業台を使い、木のツルハシを持ち、丸石を集め、石のツルハシへ進んでいく。
+
+裏側でやっていることは、だいたいこの3つに分かれる。
+
+- AmiVoice で短い日本語命令を速く文字にする
+- Minecraft の語彙と状態で、崩れた認識結果を Goal に戻す
+- よくある操作は LLM に投げず、deterministic な planner で進める
+
+ざっくり書くと、こういう流れになる。
 
 ```text
 Native mic
@@ -57,22 +115,189 @@ Native mic
   -> rule planner
   -> OpenAI fallback only when needed
   -> deterministic recipe / action planner
-  -> survival executor
+  -> Minecraft executor
 ```
 
-設計方針はシンプルです。
+この記事で書きたいのは、Minecraft 攻略 AI そのものではない。
 
-- AmiVoice は、日本語の聞き取りに集中する
-- Rule Planner で、よくある発話を決定的な Goal に変換する
-- 生成 AI は、ルールで解釈できない発話の補助に限定する
-- Recipe / Action / Safety は、決定的なコードで処理する
-- fixture と trace で、live API に依存しない再現可能な検証ループを作る
+声で何かを操作するアプリを作るとき、
+
+- どこまでを音声認識に任せるか
+- どこからをアプリ側の意味解釈にするか
+- 生成 AI を毎回呼ぶべきか
+- ノイズや言い直しをどう扱うか
+- live API 前提の失敗をどう再現可能にするか
+
+という問題が一気に出てくる。
+
+KoeCraft では、そこをかなり泥くさく分けた。
+
+:::message
+この記事は Minecraft 公式プロジェクトではありません。
+Minecraft 本体や改造クライアントの配布も行っていません。
+AmiVoice API と生成 AI を組み合わせた音声体験の実装知見を共有するための記事です。
+:::
 
 ---
 
-## 現在の構成
+## 🐾 まず、声で歩かせてみる
 
-KoeCraft は、以前は外部 Voice Agent と Minecraft MOD を分けていました。現在の標準ランタイムは **MOD-only** です。
+まずは短い命令。
+
+```text
+まっすぐ進んで
+```
+
+![声でまっすぐ進むデモ](/images/koecraft-demo-forward.gif)
+
+見た目には、Steve が前に歩いているだけに見える。
+
+でも、実装としてはただ W キーを押しっぱなしにしているわけではない。
+
+音声操作では、命令が短いほどテンポが大事になる。
+
+> 「まっすぐ進んで」
+
+と言ったあとに、数秒待たされると、もうゲーム操作として気持ちよくない。
+
+一方で、何も見ずに前進するとすぐ破綻する。
+前に段差があるかもしれない。
+水辺かもしれない。
+少し進んだら落ちるかもしれない。
+
+KoeCraft の移動 Action は、近くの地形を軽く見る。
+前方の足元と頭上を見て、進めそうなら進む。
+危なそうなら距離を短くする。
+1 ブロック段差ならジャンプを混ぜる。
+
+このあたりは、記事の見た目としては地味だ。
+
+でも、声で操作すると、こういう地味な部分が体験に効く。
+
+声の命令は、キーボードのように細かく押し直せない。
+だからこそ、実行側が少しだけ気を利かせる必要がある。
+
+もちろん、毎回きれいには進まない。
+
+![声の指示で少し詰まって聞き返すデモ](/images/koecraft-demo-stuck-recovery.gif)
+
+少し詰まる。
+候補が出る。
+言い直す。
+また動く。
+
+このあたりが、デモを見返していて一番「ピカチュウげんきでちゅう」を思い出したところだった。
+
+音声操作は、成功した瞬間だけ見ると魔法に見える。
+
+でも、実際に作ると、成功と聞き返しの間に体験がある。
+
+だから KoeCraft では、認識結果、候補、失敗理由、実行中の task を画面に出すようにした。
+
+---
+
+## 🪓 木のツルハシ、そして石のツルハシ
+
+次は、少し Minecraft らしい命令。
+
+```text
+木のツルハシ作って
+```
+
+![木のツルハシを声で指示するデモ](/images/koecraft-demo-wooden-pickaxe.gif)
+
+画面には、AmiVoice の認識候補が出る。
+KoeCraft 側では、作業台や素材の状態を見ながら plan を進める。
+
+そして、今回いちばん記事にしたかったのがこれ。
+
+```text
+石のツルハシ作って
+```
+
+「石のツルハシ作って」は、短い発話に見える。
+
+でも、サバイバル序盤では、いきなり石のツルハシは作れない。
+
+まず丸太を集める。
+板材を作る。
+棒を作る。
+作業台を作る。
+木のツルハシを作る。
+木のツルハシで丸石を掘る。
+最後に石のツルハシを作る。
+
+言葉は一文。
+中身はけっこう長い。
+
+`examples/cases/craft_stone_pickaxe_start.json` では、このケースを fixture にしている。
+
+```json
+{
+  "recognized_text": "石のツルハシ作って",
+  "expected": {
+    "goal": "craft_stone_pickaxe",
+    "route": "stone_pickaxe_route",
+    "tasks": [
+      "collect_log",
+      "pickup_items",
+      "craft_planks",
+      "craft_sticks",
+      "craft_crafting_table",
+      "open_crafting_table",
+      "craft_wooden_pickaxe",
+      "collect_cobblestone",
+      "craft_stone_pickaxe"
+    ]
+  }
+}
+```
+
+実際の trace では、認識結果だけでなく、その時点の inventory と周囲の world snapshot も一緒に残す。
+
+```json
+{
+  "recognized_text": "石のツルハシ作って",
+  "goal": {
+    "type": "craft_item",
+    "target_item": "minecraft:stone_pickaxe"
+  },
+  "inventory_snapshot": {
+    "minecraft:wooden_pickaxe": 1,
+    "minecraft:crafting_table": 2,
+    "minecraft:cobblestone": 4
+  },
+  "world_snapshot": {
+    "nearby": {
+      "minecraft:stone": true,
+      "minecraft:coal_ore": true,
+      "minecraft:jungle_log": true
+    },
+    "light_level": 4
+  },
+  "explanation": "木材、作業台、木のピッケル、丸石を順にそろえて、石のピッケルを作る計画を選びました。"
+}
+```
+
+声だけを見ると「石のツルハシ作って」の一言。
+
+でも、実行側では、今どこまで素材があるか、近くに何があるか、暗さはどうかを見ている。
+
+ここを LLM の自然文推論だけで解こうとすると、毎回それっぽい説明はできる。
+
+でも、ゲーム内で本当に使いたいのは説明ではない。
+
+必要なのは、今の inventory と周囲の状態から、同じ条件なら同じ手順を出すことだった。
+
+なので、レシピ解決と Action 生成は deterministic code に寄せた。
+
+---
+
+## 🧭 MOD の中に寄せた理由
+
+KoeCraft は、以前は外部 Voice Agent と Minecraft MOD を分けていた。
+
+でも、現在の標準ランタイムは MOD-only に寄せている。
 
 ```text
 Minecraft Java Edition
@@ -81,12 +306,20 @@ Minecraft Java Edition
       + AmiVoice HTTP adapter
       + OpenAI JSON-goal fallback
       + deterministic planner / recipe resolver
-      + survival Action executor
+      + Action executor
 ```
 
-この形に寄せた理由は、体験として「Minecraft を開いて V キーを押して話す」だけにしたかったからです。外部ブラウザ UI や別 daemon を前提にすると、デモとしては説明が増えます。MOD 内に寄せることで、音声操作の入口から実行までを Minecraft の中で見せられます。
+理由は単純で、
 
-実装上の入口は次の流れです。
+> Minecraft を開いて、V キーを押して、話す
+
+だけにしたかったから。
+
+音声デモで、外部ブラウザ UI や daemon の説明が増えると、急に体験が遠くなる。
+
+「声で動かしている」感じを出すには、入口も結果も Minecraft の中にあった方がいい。
+
+実装上の入口はこうなっている。
 
 ```text
 Minecraft V key
@@ -98,13 +331,24 @@ Minecraft V key
   -> SurvivalActionExecutor
 ```
 
-マイクは常に明示的に ON/OFF します。`V` キーで ON にすると、画面左上に `KoeCraft Voice: SPEAKING` や `LISTENING` が出ます。発話後は無音区間を検出して AmiVoice に送信します。
+`V` キーでマイクを ON にすると、画面左上に `KoeCraft Voice: SPEAKING` や `LISTENING` が出る。
+発話後は無音区間を検出して、AmiVoice に送る。
+
+設定画面も Minecraft 側に置いた。
+
+![KoeCraft MOD 設定画面](/images/koecraft-mod-settings.png)
+
+![KoeCraft 音声設定画面](/images/koecraft-mod-settings-voice.png)
+
+こういう設定も含めて Minecraft の中に置くと、声で遊んでいる感じが途切れにくい。
 
 ---
 
-## AmiVoice をどう使ったか
+## 👂 AmiVoice に任せるところ、任せないところ
 
-AmiVoice 呼び出しは MOD 側の `KoeCraftAmiVoiceRecognizer` に集約しています。
+AmiVoice 呼び出しは、MOD 側の `KoeCraftAmiVoiceRecognizer` に寄せた。
+
+multipart で音声を投げる。
 
 ```java
 String boundary = "KoeCraftBoundary" + UUID.randomUUID().toString().replace("-", "");
@@ -115,7 +359,7 @@ HttpRequest request = HttpRequest.newBuilder(URI.create(config.amivoiceEndpoint(
     .build();
 ```
 
-`d` パラメータでは `grammarFileNames` と `profileWords` を組み立てます。
+`d` パラメータでは、`grammarFileNames` と `profileWords` を組み立てる。
 
 ```java
 StringBuilder builder = new StringBuilder("grammarFileNames=")
@@ -126,7 +370,7 @@ if (!profileWords.isBlank()) {
 }
 ```
 
-`profileWords` は `data/amivoice/dict.txt` から読み込みます。
+辞書には、Minecraft 固有語を入れる。
 
 ```text
 松明    たいまつ    item
@@ -134,46 +378,210 @@ if (!profileWords.isBlank()) {
 クリーパー    くりーぱー    mob
 ```
 
-辞書は「何でも入れる」のではなく、Minecraft 固有語に寄せています。曖昧な意味解釈は AmiVoice 側に寄せず、KoeCraft 側で扱います。
+ここで欲張りすぎないようにした。
 
-たとえば:
+AmiVoice には、Minecraft 固有語をなるべく聞き取りやすくするところまでを任せる。
+でも、発話の意味を全部 AmiVoice 側で解こうとはしない。
+
+`profileWords` は、`松明` や `石のピッケル` のような語彙を寄せるために使う。
+一方で、「明かりつけるやつ」が松明なのか、今置ける状態なのか、そもそも作る必要があるのかは KoeCraft 側で判断する。
+
+たとえば、こういう発話がある。
 
 ```text
 あれ、明かりつけるやつ置いて
-  -> AmiVoice: 聞き取り
-  -> KoeCraft: light_source + place
-  -> Goal: place_light / minecraft:torch
 ```
 
-この分離が大事でした。AmiVoice は耳、KoeCraft は意味解釈、生成 AI は曖昧さの保険、実行判断は deterministic planner です。
+これは AmiVoice の辞書だけで解く話ではない。
+
+```text
+AmiVoice: 聞き取り
+KoeCraft: light_source + place と解釈
+Goal: place_light / minecraft:torch
+```
+
+聞き取りと、ゲーム内の意味を分ける。
+
+この線引きが、作っていて一番大事だった。AmiVoice の認識結果をそのまま行動にするのではなく、Minecraft の状態と合わせて Goal に変える。
 
 ---
 
-## AmiVoice 実測
+## 🗣️ 言い直しと聞き間違い
 
-手元では、同じ音声素材に対して `-a-general-input` / `-a-general`、辞書あり/なしで認識を見ました。
+音声操作を作っていると、テキスト入力ではあまり出ない言い方が普通に出る。
 
-`logs/amivoice-tests/20260618-152032/results.json` の結果を要約すると、短い基本発話では `-a-general-input` が素直でした。
+```text
+松明置いて、いや、先に石のピッケル作って
+```
 
-| clip | engine | dict | result | confidence |
-| --- | --- | --- | --- | --- |
-| `s1_norm.wav` | `-a-general-input` | あり | `土を掘って` | 1.000 |
-| `s1_norm.wav` | `-a-general-input` | なし | `土を掘って` | 1.000 |
-| `s1_norm.wav` | `-a-general` | あり | `土を掘って、` | 1.000 |
-| `s2_norm.wav` | `-a-general-input` | あり | `土を掘って` | 0.989 |
-| `s3_norm.wav` | `-a-general-input` | あり | `土を掘って` | 0.995 |
-| `s4_norm.wav` | `-a-general-input` | あり | rejected | 0.956 |
+かなり人間っぽい。
 
-ここで分かったことは、少し地味ですが重要です。
+最初に言いかけて、途中で気が変わる。
 
-- `土を掘って` のような一般語では、辞書あり/なしの差はほぼ出ない
-- `-a-general` は句読点が入るなど、短い操作コマンドにはやや余計な差分が出る
-- 信頼度が低い音声は空返答として拒否されるため、UI 側で聞き返しや継続待機が必要
-- `profileWords` は魔法ではなく、`松明`、`石のピッケル`、mob 名などの固有語に絞って効かせるのがよい
+マイクラだと、
 
-つまり「AmiVoice の辞書で全部解く」のではなく、**聞き取りやすくする語彙だけ AmiVoice に渡し、意味解釈はアプリ側で持つ** のが扱いやすいです。
+> 松明を置きたい。
+> でも、その前にツルハシがいるな。
 
-辞書チェックもハーネス化しています。
+となりやすい。
+
+KoeCraft では、このケースを `self_correction_pickaxe` として fixture にした。
+
+```json
+{
+  "recognized_text": "松明置いて、いや、先に石のピッケル作って",
+  "expected_features": {
+    "has_self_correction": true,
+    "cancelled_goal": "place_torch",
+    "active_goal": "craft_stone_pickaxe"
+  }
+}
+```
+
+ここで毎回 LLM に聞けば、たぶん賢く処理できる。
+
+でも、よく出る言い直しまで毎回 LLM に回すと、音声操作のテンポが落ちる。
+
+なので、`いや`、`やっぱ`、`先に` のような兆候は、まず rule 側で拾う。
+
+中断も同じ。
+
+```text
+待って、やっぱやめて
+```
+
+これは `abort` に落とす。
+
+声の操作では、「やめて」が効くこと自体が安心感になる。
+ここはピカチュウげんきでちゅうの仕様と比べたいというより、声で相手にお願いしているときの「いったん止まってほしい」という気持ちに近い。
+
+もうひとつ面白かったのが、ASR の聞き間違い。
+
+```text
+木のツルハシ作って
+```
+
+が、文脈によっては、
+
+```text
+きのうつるはし作って
+```
+
+のように見えることがある。
+
+文字だけ見ると、
+
+> 昨日つるはし？
+
+となる。
+
+でも Minecraft の操作発話としては、`木のツルハシ` の可能性が高い。
+
+こういうケースは、AmiVoice の辞書と KoeCraft 側の正規化を合わせて吸収する。
+
+実装側では、`MinecraftVanillaTerms` に別名も持たせている。
+
+```text
+minecraft:stone_pickaxe
+  -> 石のピッケル
+  -> 石ピッケル
+  -> ストーンピッケル
+  -> 石のツルハシ
+  -> 石つるはし
+```
+
+音声認識の結果を「きれいな日本語」として扱いすぎない。
+
+ゲーム内で何をしたいかに寄せる。
+
+この割り切りが効いた。
+
+---
+
+## 📊 AmiVoice で見たこと
+
+最初は、同じ音声素材に対して `-a-general-input` / `-a-general`、辞書あり/なしを見ていた。
+
+`土を掘って` のような短い基本発話では、`-a-general-input` が素直だった。
+
+でも、それだけでは、マイクラを声で動かしたとは言いにくい。
+
+Minecraft を声で動かすなら、見たいのはもっと泥くさいところだった。
+
+```text
+取って
+まっすぐ歩いて
+100歩歩いて
+木のツルハシ作って
+石のツルハシ作る
+暗いから松明置いて
+あれ、あの、あかりつけるやつ置いて
+```
+
+このあたりを実音声にして、AmiVoice と Whisper に通し、その後 KoeCraft の正規化・router・planner まで流した。
+
+ログは `logs/reports/asr-comparison-report.json` と `logs/reports/asr-live-recognitions.json` に残している。
+
+結果だけ見ると、20シナリオ中、AmiVoice も Whisper も 19件が planner まで到達した。
+
+ただし平均レイテンシは違った。
+
+| engine | planned | avg latency |
+| --- | ---: | ---: |
+| AmiVoice `-a-general-input` | 19 / 20 | 558 ms |
+| Whisper | 19 / 20 | 1378 ms |
+
+ここで、かなり納得した。
+
+音声操作では、最終的な文字起こしのきれいさだけではなく、
+
+> どれくらい早く、次の Goal に渡せるか
+
+が体験になる。
+
+実際のログは、わりと人間くさい。
+
+| 発話 | AmiVoice | Whisper | 見えたこと |
+| --- | --- | --- | --- |
+| `取って` | `取って` / 256 ms | `撮って` / 676 ms | 一語命令は文脈がないと同音異義語に寄る |
+| `まっすぐ歩いて` | `まっすぐ歩いて` / 370 ms | `まっすぐ歩いて` / 1259 ms | 移動命令は待ち時間の差がそのままテンポになる |
+| `100歩歩いて` | `100歩歩いて` / 365 ms | `百歩吠えて` / 586 ms | 数字とゲーム文脈はアプリ側で活かせる |
+| `木のツルハシ作って` | `木のつるはし作って` / 638 ms | `木のツルハシ作って` / 1769 ms | 表記揺れは正規化で吸収できる |
+| `石のツルハシ作る` | `石野鶴橋作る` / 799 ms | `石のツルハシ作る` / 1222 ms | 文字は崩れても、クラフト文脈なら戻せる |
+| `暗いから松明置いて` | `ぐらいから松明を置いて` / 1061 ms | `暗いから松明置いて` / 2809 ms | 先頭が崩れても、`松明` と `置いて` が拾えれば Goal にできる |
+
+`石野鶴橋作る` は、ログで見たときにちょっと笑った。
+
+大阪の駅かな、と思う。
+
+でも、Minecraft の発話として見れば、これはかなり `石のツルハシ作る` っぽい。
+
+ここで大事なのは、AmiVoice が常に完璧だった、という話ではない。
+
+むしろ逆で、音声認識の結果は普通に崩れる。
+
+だから、認識結果をそのまま正解文として扱わない。
+
+`石野鶴橋` を `石のツルハシ` に戻せるように、Minecraft の語彙、別名、クラフト文脈を KoeCraft 側に持たせる。
+
+```text
+ASR: 石野鶴橋作る
+normalize: 石のツルハシ 作る
+router: craft
+planner: craft_stone_pickaxe
+```
+
+これが、今回 AmiVoice を使って一番しっくり来たところだった。
+
+AmiVoice の強みは、短い日本語命令をかなり速く返せるところにあった。
+
+でも、認識テキストだけでゲームは動かない。
+
+ゲーム側に文脈を持たせて、聞こえた文字を操作意図に戻す。
+
+そこまで含めて、ようやく「声でマイクラを動かしている」感じになる。
+
+辞書も、入れれば入れるほど強いわけではない。
 
 ```bash
 npm run amivoice:dict-check
@@ -185,31 +593,50 @@ npm run amivoice:dict-check
 [dict] 235 entries OK
 ```
 
-短すぎる読みや重複 surface+reading は警告として出します。音声辞書は多ければ強い、ではありません。短い読みや似た語を増やすと誤認識の入口になるので、記事ではここを正直に書くのが有益だと思っています。
+短すぎる読みや、似た読みを増やしすぎると誤認識の入口になる。
+
+なので、辞書は「全部を解く魔法」ではなく、Minecraft 固有語を聞き取りやすくする補助として使った。
 
 ---
 
-## 生成 AI はどこで使うか
+## 🤖 生成 AI を最後の保険にした理由
 
-KoeCraft では、生成 AI に Action を直接出させません。
+KoeCraft では、生成 AI に Action を直接出させない。
 
-理由は単純で、実行先が Minecraft だからです。LLM に自由に手順を書かせると、`/give` や `/setblock` のような世界改変コマンドに逃げる可能性があります。それはサバイバル体験としては壊れています。
+理由は、きれいに言えばリアルタイム性。
 
-そのため、生成 AI の役割は狭くしています。
+本音を言えば、テンポとコスト。
 
-**使うところ**
+もちろん、文字起こし結果を毎回 LLM に渡して、
 
-- ルールで解釈できない発話の Goal JSON fallback
-- ひどく崩れた認識結果の speech normalization
+> これは何をしたい発話ですか？
 
-**使わないところ**
+と解釈させれば、精度は上がる。
 
-- レシピ解決
-- Action の最終生成
-- Safety 判定
-- Minecraft コマンド文字列の生成
+`石のツルハシ作って` と `石のピッケル作って` の言い換えも拾いやすい。
+少し崩れた認識結果も吸収しやすい。
 
-実際の流れはこうです。
+それは分かっていた。
+
+でも、音声入力はキーボードよりも最初から少し遅い。
+
+録音する。
+無音を検知する。
+AmiVoice に投げる。
+認識結果を待つ。
+
+この時点で、ユーザーはもう一拍待っている。
+
+そこから毎回 LLM に投げると、Minecraft の操作としてはかなり重く感じる。
+
+もうひとつ、本音がある。
+
+あまりお金を使いたくなかった。
+
+Minecraft でできる操作は、移動、採掘、クラフト、設置、退避のようにある程度限られている。
+よくある発話まで毎回 LLM に聞くより、rule planner で即座に Goal に落とし、レシピ解決や Action 生成は deterministic code で進めた方が合っていた。
+
+だから、生成 AI は「いつも使う頭脳」ではなく、最後の fallback にした。
 
 ```text
 recognized text
@@ -221,101 +648,103 @@ recognized text
   -> SurvivalActionExecutor
 ```
 
-OpenAI fallback の出力は Goal JSON 候補だけです。そこから先は `KoeCraftNativeGoalPlanner` が既知の action に落とします。
+OpenAI fallback の出力は Goal JSON 候補だけ。
+そこから先は `KoeCraftNativeGoalPlanner` が既知の action に落とす。
 
 ---
 
-## 深い計画例：「暗いから松明置いて」
+## 🌫️ ノイズという、見えない敵
 
-ライブ動画では `土を掘って` のような短い操作が見せやすいです。一方で、KoeCraft の設計が一番見えるのは、目的から不足素材を逆算するケースです。
+音声入力で一番地味に効いたのは、AmiVoice に送る前の録音区間だった。
 
-そこで、再現可能な dry-run では次を使っています。
+Minecraft は、そもそも音が多い。
+
+BGM。
+環境音。
+ブロックを壊す音。
+マウスやキーボードの音。
+
+ここを雑に扱うと、話していないのに録音が始まる。
+発話の先頭が欠ける。
+無音判定が遅れて、テンポが悪くなる。
+
+KoeCraft では、まず RMS で音量を見る。
+
+ただ、固定しきい値だけだと、部屋やマイクによってすぐズレる。
+
+そこで、発話前の短い環境音からノイズ床を見積もり、発話検知しきい値を自動で調整する `AdaptiveNoiseGate` を入れた。
+
+これはノイズサプレッションではない。
+
+音をきれいにする仕組みではなく、AmiVoice に投げる録音開始を間違えにくくする軽量ゲートだ。
+
+録音中には、こういう値を更新する。
 
 ```text
-暗いから松明置いて
+rms
+maxRms
+threshold
+detectedSpeech
+silence
 ```
 
-松明も石炭もない状態だと、KoeCraft は `charcoal_route` を選びます。
+さらに pre-roll も持つ。
 
-```bash
-make agent-dry-run
-```
+発話を検知した瞬間から録音すると、先頭の「いしの...」の「い」が欠けることがある。
+直前の短い buffer も一緒に入れることで、AmiVoice に渡す音声の頭を落としにくくした。
 
-出力:
+RMS だけでは足りない場合もある。
 
-```json
-{
-  "recognized_text": "暗いから松明置いて",
-  "goal": {
-    "type": "place_light",
-    "target_item": "minecraft:torch"
-  },
-  "selected_route": "charcoal_route",
-  "tasks": [
-    "collect_log",
-    "pickup_items",
-    "craft_planks",
-    "craft_sticks",
-    "craft_crafting_table",
-    "open_crafting_table",
-    "craft_wooden_pickaxe",
-    "close_screen",
-    "collect_cobblestone",
-    "pickup_items",
-    "open_crafting_table",
-    "craft_furnace",
-    "close_screen",
-    "open_furnace",
-    "smelt_charcoal",
-    "close_screen",
-    "craft_torch",
-    "ensure_torch_hotbar",
-    "place_torch"
-  ],
-  "safety": {
-    "valid": true,
-    "errors": []
-  }
-}
-```
-
-「松明を置く」だけなら簡単に見えます。しかしサバイバル序盤では、松明を作るために棒と石炭または木炭が必要です。石炭がなければ木炭を焼く必要があり、そのためにはかまどが必要で、かまどには丸石が必要で、丸石には木のピッケルが必要です。
-
-この依存関係を LLM の自然文推論だけで扱うのではなく、レシピカタログと deterministic planner に寄せています。
-
----
-
-## Safety: サバイバル合法にする
-
-KoeCraft は、Minecraft を便利にする MOD ではありますが、`/give` で解決する MOD ではありません。
-
-禁止している代表例:
+Minecraft の BGM や環境音を拾いやすいときは、Silero VAD の ONNX model を `KoeCraftVoiceActivityGate` として使う。
 
 ```text
-/give
-/fill
-/setblock
-/tp
-/summon
-/kill
+RMS threshold
+  + adaptive noise threshold
+  + Silero VAD confidence
+  -> speechActive
 ```
 
-`ExecutorProtocol` は Action JSON 全体を走査し、禁止コマンド文字列が含まれていれば拒否します。WebSocket 経由の executor でも `banned command text detected` として落とします。
+Silero VAD が読み込めない環境では、マイク自体を落とさず `rms` provider に戻す。
+HUD や設定画面には、`vad_provider`、`vad_confidence`、`vad_fallback_reason` を出せるようにした。
 
-また、`SurvivalActionExecutor` は次のような実プレイ上の安全も見ます。
+完璧な音声認識を作りたかったわけではない。
 
-- lava / fire / fall risk で通常移動や採掘を止める
-- hostile mob が近い場合は防御・退避・シェルターを優先する
-- block breaking / movement / eating / smelting などを bounded timeout で止める
-- abort が来たら ongoing action を中断する
-
-この設計のおかげで、音声認識や LLM fallback が多少揺れても、最後に実行できる Action は制限されたものだけになります。
+声を出してから結果が返るまでのテンポを崩さずに、AmiVoice に渡す音声をできるだけ「発話らしい区間」に寄せたかった。
 
 ---
 
-## 再現性
+## 📜 失敗を fixture にする
 
-live AmiVoice や Minecraft 実機だけで開発すると、失敗の再現が難しくなります。そこで、KoeCraft では fixture とハーネスを厚めにしています。
+live AmiVoice と Minecraft 実機だけで開発すると、失敗の再現が難しい。
+
+さっきは動いた。
+今は動かない。
+でも、録音も状態も少し違う。
+
+音声認識、LLM、planner、Minecraft MOD が全部絡むので、
+
+> どこが悪かったのか
+
+がすぐ分からない。
+
+そこで、KoeCraft では失敗を fixture に昇格するループに寄せた。
+
+```text
+実装する
+  -> デモで失敗する
+  -> trace を読む
+  -> 失敗を fixture に昇格する
+  -> planner / 正規化 / executor を直す
+  -> harness を回す
+```
+
+声で操作するデモは、成功すると気持ちいい。
+
+でも、成功動画だけ見ていると何も強くならない。
+
+> 今の失敗、次も再現できる？
+
+を拾う方が大事だった。
 
 ```bash
 make agent-check
@@ -332,60 +761,64 @@ BUILD SUCCESSFUL
 [harness] done
 ```
 
-さらに dry-run で trace JSON も残します。
+声で言ったらたまたま動いた、では終わらせない。
 
-```text
-logs/traces/2026-06-18T14-00-28-554937Z-charcoal_route.json
-```
+同じ入力状態なら同じ plan になる。
+そこまでを fixture で見る。
 
-この「live で見せる部分」と「fixture で検証する部分」を分けるのは、音声アプリではかなり重要でした。live API の成功だけを見ていると、失敗ケースや境界条件が育ちません。
-
----
-
-## 作ってみて残った整理
-
-Minecraft はかなり特殊な題材です。ただ、作っている途中で「これはゲームに限らず、音声で何かを操作するアプリでは同じ悩みになりそうだな」と感じた部分がありました。
-
-自分の中では、最終的に次の流れで考えると整理しやすかったです。
-
-```text
-Speech-to-Text
-  -> Intent / Goal
-  -> deterministic planner
-  -> safety gate
-  -> execution
-  -> trace
-```
-
-特に効いたのは、次の 5 つでした。
-
-- 音声認識と意味理解を分ける
-- LLM には Action を直接出させず、Goal JSON に閉じ込める
-- 実行判断は deterministic code に寄せる
-- Safety gate を最後に置く
-- live API と fixture 検証を分ける
-
-この形にしておくと、音声認識が多少揺れても、実行側の安全性と再現性を保ちやすくなりました。
+これは地味だけど、音声アプリではかなり大事だった。
 
 ---
 
-## まとめ
+## 🧓 令和のスイカ割りを作ってみて
 
-KoeCraft Agent は、AmiVoice API と生成 AI を使って、日本語の話し言葉を Minecraft サバイバルの実行手順に変換する MOD です。
+KoeCraft Agent は、AmiVoice API と生成 AI を使って、日本語の話し言葉を Minecraft の実行手順に変換する MOD です。
 
-この記事で特に共有したかったのは、次の設計です。
+この記事で共有したかったのは、次の分担です。
 
 ```text
-AmiVoice は耳
-LLM は曖昧さの保険
-実行判断は deterministic planner
-最後に safety gate
+AmiVoice は固有語の聞き取りを助ける
+KoeCraft は Minecraft の状態と合わせて Goal にする
+LLM は最後の保険
+ノイズ対策は AmiVoice に投げる前
 検証は fixture と trace
 ```
 
-音声認識と生成 AI を組み合わせるとき、「聞き取れたテキストをどう安全に行動へ変えるか」が一番おもしろい部分でした。
+作ってみて思った。
 
-Minecraft は派手な題材ですが、今回悩んだことは「音声で何かを安全に操作する」アプリならかなり近い形で出てきそうだと感じています。
+音声操作は、思ったより未来っぽくない。
+
+むしろ、ちょっと懐かしい。
+
+こちらが声を出す。
+画面の中の相棒が少し考える。
+伝わったり、伝わらなかったりする。
+詰まったら、こちらもまた言い直す。
+
+そこには、平成の音声ゲームっぽい手触りがある。
+
+ただ、令和の自分たちには、AmiVoice があり、生成 AI があり、ログがあり、fixture がある。
+
+昔はただ祈るしかなかった「伝われ」が、
+今は少しずつ分解できる。
+
+マイクのノイズなのか。
+認識語彙なのか。
+言い直しなのか。
+planner なのか。
+Minecraft 側の状態なのか。
+
+ひとつずつ切り分けていくと、声でゲームを動かす体験は、単なるネタではなく、かなり実装しがいのある題材だった。
+
+スイカ割りは、今でもたぶん難しい。
+
+でも、あの頃よりは少しだけ、
+
+> なぜ伝わらなかったのか
+
+を調べられるようになった。
+
+それだけでも、なんだか時代が進んだ気がする。
 
 ---
 
