@@ -1,0 +1,198 @@
+{
+  "version": 1,
+  "thresholds": {
+    "cleanMax": 2,
+    "warnMax": 7
+  },
+  "rules": [
+    {
+      "id": "opener.article-explains",
+      "category": "opener",
+      "severity": "warn",
+      "weight": 3,
+      "match": "contains",
+      "pattern": "本記事では",
+      "message": "AIっぽい導入定型に見えやすい",
+      "suggestion": "作ったもの・困りごと・実行例から入る"
+    },
+    {
+      "id": "opener.this-article-about",
+      "category": "opener",
+      "severity": "warn",
+      "weight": 3,
+      "match": "regex",
+      "pattern": "この記事では.{0,40}(解説|紹介|説明)します",
+      "message": "「この記事では〜解説します」型の導入",
+      "suggestion": "読者が得るものを先に見せる"
+    },
+    {
+      "id": "opener.lets-start",
+      "category": "opener",
+      "severity": "warn",
+      "weight": 2,
+      "match": "regex",
+      "pattern": "(それでは早速|さっそく見ていき|見ていきましょう|深掘りしていき)",
+      "message": "ナレーション型の導入",
+      "suggestion": "デモや出力を先に置く"
+    },
+    {
+      "id": "closer.how-was-it",
+      "category": "closer",
+      "severity": "warn",
+      "weight": 3,
+      "match": "contains",
+      "pattern": "いかがでしたでしょうか",
+      "message": "空の締めに見えやすい",
+      "suggestion": "やったことの対比で短く着地する"
+    },
+    {
+      "id": "closer.try-only",
+      "category": "closer",
+      "severity": "warn",
+      "weight": 2,
+      "match": "regex",
+      "pattern": "ぜひ(試して|触って|ご活用)ください[。!]?$",
+      "message": "締めが行動喚起だけになっている",
+      "suggestion": "学びの一文を足してから必要なら試す"
+    },
+    {
+      "id": "closer.hope-helpful",
+      "category": "closer",
+      "severity": "warn",
+      "weight": 2,
+      "match": "regex",
+      "pattern": "(参考になれば|お役に立て|お読みいただき)",
+      "message": "読者への定型あいさつ",
+      "suggestion": "まとめ節で事実だけ振り返る"
+    },
+    {
+      "id": "hype.absolute",
+      "category": "hype",
+      "severity": "warn",
+      "weight": 3,
+      "match": "contains",
+      "pattern": "圧倒的",
+      "message": "誇張に見えやすい表現",
+      "suggestion": "実測値・条件付きの言い方にする"
+    },
+    {
+      "id": "hype.fast",
+      "category": "hype",
+      "severity": "warn",
+      "weight": 3,
+      "match": "contains",
+      "pattern": "爆速",
+      "message": "実測なしの速度表現",
+      "suggestion": "数値・環境・限界を書く"
+    },
+    {
+      "id": "hype.revolutionary",
+      "category": "hype",
+      "severity": "warn",
+      "weight": 3,
+      "match": "contains",
+      "pattern": "革命的",
+      "message": "誇張に見えやすい表現",
+      "suggestion": "何が変わったかを具体的に書く"
+    },
+    {
+      "id": "hype.game-changer",
+      "category": "hype",
+      "severity": "warn",
+      "weight": 2,
+      "match": "regex",
+      "pattern": "(ゲームチェンジャー|最強|神ツール|完全理解)",
+      "message": "大げさな評価語",
+      "suggestion": "AGENTS.md の誇張禁止に合わせて言い換える"
+    },
+    {
+      "id": "tone.slack-keigo",
+      "category": "tone",
+      "severity": "warn",
+      "weight": 2,
+      "match": "contains",
+      "pattern": "いただけますと幸いです",
+      "message": "Slack寄りのビジネス敬語",
+      "suggestion": "記事向けのです・ます調にする"
+    },
+    {
+      "id": "tone.business-review",
+      "category": "tone",
+      "severity": "warn",
+      "weight": 2,
+      "match": "contains",
+      "pattern": "ご査収",
+      "message": "記事本文には硬すぎるビジネス敬語",
+      "suggestion": "説明文として言い直す"
+    },
+    {
+      "id": "filler.we-will",
+      "category": "filler",
+      "severity": "warn",
+      "weight": 2,
+      "match": "regex",
+      "pattern": "(していきます|見ていきます|押さえておきましょう|ポイントは以下のとおり)",
+      "message": "ナレーション型のつなぎ",
+      "suggestion": "手順・結果をそのまま並べる"
+    },
+    {
+      "id": "filler.one-can-say",
+      "category": "filler",
+      "severity": "warn",
+      "weight": 2,
+      "match": "regex",
+      "pattern": "と言えるでしょう",
+      "message": "AI文でよく見る曖昧な断定",
+      "suggestion": "言える範囲を条件付きで書く"
+    },
+    {
+      "id": "filler.in-conclusion",
+      "category": "filler",
+      "severity": "warn",
+      "weight": 1,
+      "match": "regex",
+      "pattern": "^(以上|まとめると)[、,]",
+      "message": "定型のまとめ導入",
+      "suggestion": "「今回やったことを振り返ると」など具体化する"
+    },
+    {
+      "id": "emoji.body",
+      "category": "emoji",
+      "severity": "warn",
+      "weight": 1,
+      "match": "regex",
+      "pattern": "[\\u{1F300}-\\u{1FAFF}\\u{2600}-\\u{27BF}]",
+      "flags": "u",
+      "message": "本文中の絵文字（モードB見出し以外は避ける）",
+      "suggestion": "見出し以外では絵文字を外す"
+    },
+    {
+      "id": "spelling.github",
+      "category": "spelling",
+      "severity": "info",
+      "weight": 0,
+      "match": "contains",
+      "pattern": "Github",
+      "message": "固有名詞の表記ゆれ",
+      "suggestion": "GitHub に統一する"
+    }
+  ],
+  "heuristics": [
+    {
+      "id": "structure.repeated-sentence-opener",
+      "category": "structure",
+      "severity": "warn",
+      "weight": 2,
+      "message": "同じ語尾が短い間隔で連続している",
+      "suggestion": "要約の一文・具体例・短い段落でリズムを変える"
+    },
+    {
+      "id": "structure.list-only-section",
+      "category": "structure",
+      "severity": "info",
+      "weight": 1,
+      "message": "見出し直下が箇条書きだけで prose が少ない",
+      "suggestion": "並列で見せたいとき以外は文章で流す"
+    }
+  ]
+}

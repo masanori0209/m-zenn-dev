@@ -1,0 +1,109 @@
+{
+  "ignore": [
+    {
+      "path": "articles/454a3a0dd27dc8.md",
+      "severities": ["warn"],
+      "reason": "legacy article; do not edit existing published posts just to satisfy the new harness"
+    },
+    {
+      "path": "articles/7361d41918a6e8.md",
+      "severities": ["warn"],
+      "reason": "legacy article; do not edit existing published posts just to satisfy the new harness"
+    },
+    {
+      "path": "articles/97cb01b53e460f.md",
+      "severities": ["warn"],
+      "reason": "legacy article; do not edit existing published posts just to satisfy the new harness"
+    },
+    {
+      "path": "articles/abed6833b79f30.md",
+      "severities": ["warn"],
+      "reason": "legacy article; do not edit existing published posts just to satisfy the new harness"
+    },
+    {
+      "path": "articles/b5d0e283f9b68b.md",
+      "severities": ["warn"],
+      "reason": "legacy article; do not edit existing published posts just to satisfy the new harness"
+    },
+    {
+      "path": "articles/e6d8e548106bad.md",
+      "severities": ["warn"],
+      "reason": "legacy article; do not edit existing published posts just to satisfy the new harness"
+    },
+    {
+      "path": "articles/handovergap-rag-tidb.md",
+      "severities": ["warn"],
+      "reason": "legacy article; do not edit existing published posts just to satisfy the new harness"
+    },
+    {
+      "path": "articles/hmscalc-google-calendar-scheduling.md",
+      "severities": ["warn"],
+      "reason": "legacy article; do not edit existing published posts just to satisfy the new harness"
+    },
+    {
+      "path": "articles/hmscalc-work-time-hhmm.md",
+      "severities": ["warn"],
+      "reason": "legacy article; do not edit existing published posts just to satisfy the new harness"
+    },
+    {
+      "path": "articles/koe-craft-agent-amivoice.md",
+      "severities": ["warn"],
+      "reason": "legacy article; do not edit existing published posts just to satisfy the new harness"
+    },
+    {
+      "path": "articles/rancher-desktop-docker.md",
+      "severities": ["warn"],
+      "reason": "legacy article; do not edit existing published posts just to satisfy the new harness"
+    },
+    {
+      "path": "articles/wasabi-table-wasm.md",
+      "severities": ["warn"],
+      "reason": "legacy article; do not edit existing published posts just to satisfy the new harness"
+    },
+    {
+      "path": "images/handovergap-design-comparison.png",
+      "severities": ["warn"],
+      "reason": "legacy media already used by existing posts"
+    },
+    {
+      "path": "images/koecraft-demo-forward.gif",
+      "severities": ["warn"],
+      "reason": "legacy media already used by existing posts"
+    },
+    {
+      "path": "images/koecraft-demo-stone-pickaxe.gif",
+      "severities": ["warn"],
+      "reason": "legacy media already used by existing posts"
+    },
+    {
+      "path": "images/koecraft-demo-wooden-pickaxe.gif",
+      "severities": ["warn"],
+      "reason": "legacy media already used by existing posts"
+    },
+    {
+      "path": "images/koecraft-mod-settings-voice.png",
+      "severities": ["warn"],
+      "reason": "legacy media already used by existing posts"
+    },
+    {
+      "path": "images/koecraft-mod-settings.png",
+      "severities": ["warn"],
+      "reason": "legacy media already used by existing posts"
+    },
+    {
+      "path": "images/multi-modal-sample-01.png",
+      "severities": ["warn"],
+      "reason": "legacy media already used by existing posts"
+    },
+    {
+      "path": "images/rancher-welcome.png",
+      "severities": ["warn"],
+      "reason": "legacy media already used by existing posts"
+    },
+    {
+      "path": "images/wasabi-bench-result.png",
+      "severities": ["warn"],
+      "reason": "legacy media already used by existing posts"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "private": true,
+  "scripts": {
+    "check:articles": "node scripts/check-articles.mjs",
+    "check:articles:strict": "node scripts/check-articles.mjs --strict",
+    "check:articles:network": "node scripts/check-articles.mjs --network",
+    "check:ai-smell": "node scripts/check-ai-smell.mjs",
+    "check:ai-smell:strict": "node scripts/check-ai-smell.mjs --strict",
+    "check:published-strict": "node scripts/check-articles.mjs --strict --published-diff",
+    "review:article": "node scripts/article-review-brief.mjs",
+    "setup:hooks": "git config core.hooksPath .githooks",
+    "preview": "npx zenn preview",
+    "new:article": "npx zenn new:article",
+    "new:book": "npx zenn new:book"
+  }
+}

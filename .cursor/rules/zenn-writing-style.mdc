@@ -1,0 +1,19 @@
+---
+description: Zenn記事やbooks配下のMarkdownを書く／直すとき、筆者本人らしい技術解説文または小説風の語りにそろえる。
+globs: ["articles/**/*.md", "books/**/*.md"]
+alwaysApply: false
+---
+
+# Zenn 執筆スタイル
+
+この Cursor Rule は、記事編集時に文体ガイドを思い出すための薄い入口です。文体・構成・禁止事項の唯一の正（single source of truth）は、リポジトリ直下の `AGENTS.md` です。
+
+@AGENTS.md
+
+文章を書く・直すときは、上の `AGENTS.md` を読み、必要に応じて基準サンプルの記事も確認してください。このファイルには文体ルールを重複して増やさず、Cursor 固有のトリガーだけを置きます。
+
+Cursor で記事編集をするときは、特に次を守ります。
+
+- `articles/**/*.md` / `books/**/*.md` の編集時だけ適用する。
+- 文体の修正は `AGENTS.md` に戻してから行う。
+- ルールが効いていないと感じたら、まず `AGENTS.md` を明示的に読み直す。

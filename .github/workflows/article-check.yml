@@ -1,0 +1,50 @@
+name: Article Check
+
+on:
+  pull_request:
+    paths:
+      - "articles/**/*.md"
+      - "books/**/*.md"
+      - "images/**"
+      - "AGENTS.md"
+      - "article-check.config.json"
+      - "article-ai-smell.rules.json"
+      - "scripts/check-articles.mjs"
+      - "scripts/check-ai-smell.mjs"
+      - "scripts/lib/ai-smell.mjs"
+      - "scripts/article-review-brief.mjs"
+      - "package.json"
+  push:
+    branches:
+      - main
+    paths:
+      - "articles/**/*.md"
+      - "books/**/*.md"
+      - "images/**"
+      - "AGENTS.md"
+      - "article-check.config.json"
+      - "article-ai-smell.rules.json"
+      - "scripts/check-articles.mjs"
+      - "scripts/check-ai-smell.mjs"
+      - "scripts/lib/ai-smell.mjs"
+      - "scripts/article-review-brief.mjs"
+      - "package.json"
+
+jobs:
+  article-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm run check:articles
+      - run: npm run check:ai-smell
+      - name: Strict check for newly published articles
+        if: github.event_name == 'pull_request'
+        run: npm run check:published-strict -- --published-diff-base=origin/${{ github.base_ref }}
+      - name: Strict check for articles published in this push
+        if: github.event_name == 'push'
+        run: npm run check:published-strict -- --published-diff-base=HEAD^

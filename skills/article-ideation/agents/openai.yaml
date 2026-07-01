@@ -1,0 +1,4 @@
+interface:
+  display_name: "Article Ideation"
+  short_description: "Zenn記事の種を根拠から育てる発想手順"
+  default_prompt: "Use $article-ideation to turn recent work or rough notes into publishable Zenn article ideas."
