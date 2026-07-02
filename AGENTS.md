@@ -201,9 +201,22 @@ Agent Skills / `SKILL.md` に切り出すのは、文体そのものではなく
 - 「一方で、まだ言えないこともあります」→ 箇条書き。
 - 最後に「次に進めるなら」で、次の一歩を書く。
 
----
+### 5.8 記事用デモリポジトリ
 
-## 6. Zenn frontmatter
+記事で手を動かせるデモを作る場合は、**`m-zenn-dev` リポジトリ内の `demos/` には置かない**。次のルールに従う。
+
+1. **配置場所:** `/Users/m_m/develop/9999_m2lab/` 配下に、記事専用の独立フォルダを作る。  
+   例: `/Users/m_m/develop/9999_m2lab/python-pybind11-profile-demo/`
+2. **GitHub 公開:** [masanori0209](https://github.com/masanori0209) アカウントで **public リポジトリ** として publish する。  
+   例: `https://github.com/masanori0209/python-pybind11-profile-demo`
+3. **記事からの参照:** 本文ではローカルパスだけで済ませず、**GitHub URL を先に貼る**。clone 手順はその URL を使う。
+4. **命名:** リポジトリ名は `-demo`  suffix を付けることが多い（`nginx-alb-gateway-demo` など）。記事 slug と完全一致でなくてよいが、何のデモか分かる名前にする。
+5. **スクショ:** 画像本体は `m-zenn-dev/images/` に置く。再生成できるよう、デモ側に `scripts/capture-media.sh` のようなスクリプトを置くとよい（`ZENN_IMAGES_DIR` で出力先を指定可能にする）。
+6. **README:** デモ README に Zenn 記事 URL（公開前なら「公開後に追記」）を書く。
+
+`m-zenn-dev/demos/` は過去の置き場所であり、**新規デモの正規配置先ではない**。
+
+---
 
 記事の先頭は必ずこの形。
 
@@ -230,8 +243,9 @@ published: false        # 完成し確認するまでは false
 4. 主張を書いたら、必ず「言い過ぎていないか」を自分でチェックする（2.1）。
 5. コード・コマンド・数値は、可能なら**実際に動かして**裏を取る。動かせないものは「未検証」と分かるように書く。
 6. 画像プレースホルダは `/images/...` で置き、実ファイルが要ることをユーザーに伝える。
-7. 公開前に `npm run check:articles -- articles/対象記事.md` を実行し、frontmatter・画像・Zenn 記法・文体 warning を確認する。AI 臭の機械チェックは `npm run check:ai-smell -- articles/対象記事.md`（ルールは `article-ai-smell.rules.json`）。外部リンクは必要なときだけ `npm run check:articles:network -- articles/対象記事.md` で確認する。新規記事や公開直前は `node scripts/check-articles.mjs --strict articles/対象記事.md` と `npm run check:ai-smell:strict -- articles/対象記事.md` も使う。
-8. 完成しても `published: false` のまま。プレビューは `npx zenn preview`。
+7. **記事用デモ**を作る場合は 5.8 のルールに従う（`/Users/m_m/develop/9999_m2lab/` 配下 + `masanori0209` GitHub 公開）。
+8. 公開前に `npm run check:articles -- articles/対象記事.md` を実行し、frontmatter・画像・Zenn 記法・文体 warning を確認する。AI 臭の機械チェックは `npm run check:ai-smell -- articles/対象記事.md`（ルールは `article-ai-smell.rules.json`）。外部リンクは必要なときだけ `npm run check:articles:network -- articles/対象記事.md` で確認する。新規記事や公開直前は `node scripts/check-articles.mjs --strict articles/対象記事.md` と `npm run check:ai-smell:strict -- articles/対象記事.md` も使う。
+9. 完成しても `published: false` のまま。プレビューは `npx zenn preview`。
 
 ---
 
