@@ -16,4 +16,5 @@ Cursor で記事編集をするときは、特に次を守ります。
 
 - `articles/**/*.md` / `books/**/*.md` の編集時だけ適用する。
 - 文体の修正は `AGENTS.md` に戻してから行う。
+- 成果物にメタを書かないルールは `.cursor/rules/no-meta-in-articles.mdc` も参照する。
 - ルールが効いていないと感じたら、まず `AGENTS.md` を明示的に読み直す。

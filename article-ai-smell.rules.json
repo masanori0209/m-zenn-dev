@@ -175,6 +175,36 @@
       "pattern": "Github",
       "message": "固有名詞の表記ゆれ",
       "suggestion": "GitHub に統一する"
+    },
+    {
+      "id": "meta.edit-narration",
+      "category": "meta",
+      "severity": "warn",
+      "weight": 3,
+      "match": "regex",
+      "pattern": "この(記事|節|章|段落).*?(更新|修正|追記|変更)しました",
+      "message": "編集ナレーションが本文に混入",
+      "suggestion": "読者向けの事実だけ書く（AGENTS.md §5.10）"
+    },
+    {
+      "id": "meta.prompt-echo",
+      "category": "meta",
+      "severity": "warn",
+      "weight": 3,
+      "match": "regex",
+      "pattern": "依頼(?:どおり|に従い|に沿って)",
+      "message": "依頼文の写しが本文に混入",
+      "suggestion": "プロンプトの言い回しを記事に書き戻さない"
+    },
+    {
+      "id": "meta.internal-note",
+      "category": "meta",
+      "severity": "warn",
+      "weight": 2,
+      "match": "regex",
+      "pattern": "^(NOTE|Agent|エージェント向け)\\s*[:：]",
+      "message": "内部ラベルが本文に混入",
+      "suggestion": "チャットか evidence コメントに逃がす"
     }
   ],
   "heuristics": [

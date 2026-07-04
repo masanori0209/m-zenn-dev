@@ -1,0 +1,4 @@
+interface:
+  display_name: "Article Publish"
+  short_description: "Zenn記事の公開・再公開（チェック→commit→push）"
+  default_prompt: "Use $article-publish to publish or republish the current Zenn article after checks pass."

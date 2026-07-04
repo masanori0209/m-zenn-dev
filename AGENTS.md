@@ -26,7 +26,12 @@ Agent Skills / `SKILL.md` に切り出すのは、文体そのものではなく
 
 つまり、**常に守る文体ルールは `AGENTS.md`、必要なときだけ呼ぶ作業手順は skill** です。
 
-記事のアイデア出し、タイトル案、切り口、構成の種出しを依頼されたときは、`skills/article-ideation/SKILL.md` を先に読みます。アイデアの出し方は skill に従い、文体・語り口・禁止事項はこの `AGENTS.md` に戻って判断します。
+| 依頼の種類 | 読む skill |
+|---|---|
+| アイデア出し・タイトル案・切り口・構成 | `skills/article-ideation/SKILL.md` |
+| 公開・再公開・push して反映 | `skills/article-publish/SKILL.md` |
+
+アイデアの出し方・公開手順は skill に従い、文体・語り口・禁止事項はこの `AGENTS.md` に戻って判断します。
 
 ---
 
@@ -113,6 +118,7 @@ Agent Skills / `SKILL.md` に切り出すのは、文体そのものではなく
 - 「圧倒的」「爆速」「革命的」などの誇張ワードを使わない。
 - AI が書いた匂いのする定型（「本記事では〜について解説します」「いかがでしたでしょうか」）を使わない。
 - 内容を水増ししない。薄い段落を足すより、削って濃くする。
+- **成果物にメタ情報を書かない**（→ 5.10）。チャット向けの報告・依頼の写し・編集ナレーションは記事に入れない。
 
 ---
 
@@ -161,8 +167,10 @@ Agent Skills / `SKILL.md` に切り出すのは、文体そのものではなく
 - Zenn のファイル名付き記法も使う（```python:app.py）。
 - **実際の出力**を載せる。それっぽい捏造をしない。値を作るなら「ある実行例では」と明記。
 - コマンドは、コピペで動く粒度で。
-- ベンチ・数字・「速い」系の主張を書くときは、近くに単行 HTML コメントで根拠を残す。
+- ベンチ・数字・「速い」系の主張を書くときは、近くに単行 HTML コメントで根拠を残すとよい。
   - 例：`<!-- evidence: command="npm run bench"; log="reports/bench-2026-07-01.md" -->`
+  - **Zenn 上は非表示**なので、公開後も残してよい。エージェント・将来の自分向けメモとして使う。
+  - 数字の近くに evidence がないと `check:articles` が `content.evidence` warn を出す（error ではない）。
 
 ### 5.2 表
 
@@ -173,7 +181,16 @@ Agent Skills / `SKILL.md` に切り出すのは、文体そのものではなく
 ### 5.3 図
 
 - 構成やフローは Mermaid（`flowchart` / `sequenceDiagram`）で描く。
-- 画像は `/images/` 配下。alt テキストは内容が分かる日本語で書く。
+- 画像は `/images/` 配下。Markdown は `![説明](/images/xxx.png)` 形式（プレーンテキストだけにしない）。
+- alt テキストは内容が分かる日本語で書く。
+
+### 5.9 画像・メディア
+
+- ファイル名は **記事 slug やトピックを prefix** にすることが多い（例: `cobol-webfw-home.png`, `nginx-gateway-demo-routing.png`）。記事 slug と完全一致でなくてよい。
+- Zenn の GitHub 連携では **1 ファイル 3 MB 以内**、拡張子は `.png` `.jpg` `.jpeg` `.gif` `.webp`。
+- ローカル `.mp4` は `/images` ではなく外部（YouTube 等）に逃がす。`assets/` に置く場合も記事本文からは外部 URL か別手段で参照する。
+- 公開 URL: `https://zenn.dev/m2lab/articles/<slug>`（`<slug>` = `articles/<slug>.md` のファイル名）。
+- リポジトリ容量: 現状は GitHub 上 ~30 MB 程度で余裕。GIF を増やし続けると履歴が膨らむので、**500 MB〜1 GB** を目安に LFS や外部ホスティングを検討する。
 
 ### 5.4 Zenn 独自記法
 
@@ -210,13 +227,48 @@ Agent Skills / `SKILL.md` に切り出すのは、文体そのものではなく
 2. **GitHub 公開:** [masanori0209](https://github.com/masanori0209) アカウントで **public リポジトリ** として publish する。  
    例: `https://github.com/masanori0209/python-pybind11-profile-demo`
 3. **記事からの参照:** 本文ではローカルパスだけで済ませず、**GitHub URL を先に貼る**。clone 手順はその URL を使う。
-4. **命名:** リポジトリ名は `-demo`  suffix を付けることが多い（`nginx-alb-gateway-demo` など）。記事 slug と完全一致でなくてよいが、何のデモか分かる名前にする。
+4. **命名:** リポジトリ名は `-demo` suffix を付けることが多い（`nginx-alb-gateway-demo` など）。**記事 slug・画像 prefix と完全一致でなくてよい**（例: 記事 `cobol-webfw-nextjs-django.md`、repo `cobol-webfw`）。
 5. **スクショ:** 画像本体は `m-zenn-dev/images/` に置く。再生成できるよう、デモ側に `scripts/capture-media.sh` のようなスクリプトを置くとよい（`ZENN_IMAGES_DIR` で出力先を指定可能にする）。
-6. **README:** デモ README に Zenn 記事 URL（公開前なら「公開後に追記」）を書く。
+6. **README（2 パターン）:**
+   - **`-demo` リポジトリ**（記事の再現用）: README に clone / 実行手順を書き、Zenn 記事 URL を載せることが多い（公開前は「公開後に追記」）。
+   - **フレームワーク／製品寄り**（`-demo` でない、`cobol-webfw` など）: README は **standalone**（英語可）。記事のナラティブ（行数測定の経緯など）は載せない。Zenn URL は **必須ではない**（記事 → GitHub の一方リンクで足りる）。
+7. **公開前の動作確認:** デモに `scripts/run-all.sh` や `docker compose` があるなら、記事公開前に実行して通す。
 
 `m-zenn-dev/demos/` は過去の置き場所であり、**新規デモの正規配置先ではない**。
 
+記事 slug を変えて作り直すときは、**旧 `articles/*.md` と使わなくなった `images/*` を削除**してから公開する（置き換え草稿の取りこぼし防止）。
+
+### 5.10 成果物にメタを書かない
+
+エージェントが記事・books に**読者向けでない情報**を混ぜがちなので、禁止をはっきり書く。ルールだけでは漏れるので `check:articles` の `content.meta.*` も見る。
+
+**書いてよいもの**
+
+- 読者向け本文、`:::message` / `:::details`、コード・表・図
+- `<!-- evidence: command="..."; log="..." -->` … HTML コメントだが **Zenn 上は非表示**。根拠メモとして残してよい
+
+**書いてはいけないもの**（`articles/` / `books/` の Markdown 内）
+
+- 編集ナレーション（「この節を更新しました」「依頼どおり修正しました」）
+- チャット向けの前置き・報告・次の一手の**転写**
+- プロンプトや指示文の言い換えコピー
+- `NOTE:` / `Agent:` / `エージェント向け:` などの内部ラベル
+- evidence 以外の HTML コメント（`<!-- TODO -->` / `<!-- fix later -->` など）
+- 依頼されていない `TODO` / `FIXME` / `要確認` / `あとで`（draft marker）
+
+**置き場所**
+
+| 内容 | 置く場所 |
+|---|---|
+| 根拠コマンド・ログパス | `<!-- evidence: ... -->` またはデモ repo の `reports/` |
+| 作業メモ・次の一手 | チャット、または `CLAUDE.local.md`（コミットしない） |
+| 公開手順 | `skills/article-publish/SKILL.md` |
+
+否定形の例（エージェント向け）：「依頼どおり〇〇を追記しました」と書かない。読者向けの事実だけ書く。
+
 ---
+
+## 6. frontmatter
 
 記事の先頭は必ずこの形。
 
@@ -231,7 +283,8 @@ published: false        # 完成し確認するまでは false
 ```
 
 - タイトルは内容が具体的に分かるものに。体験談なら少しキャッチーにしてよい（例：「マイクラを声で動かそうとしたら令和の『ピカチュウげんきでちゅう』になった話」）。
-- `published: true` に切り替えるのは、本人が公開判断したときだけ。エージェントが勝手に `true` にしない。
+- `published: true` に切り替えるのは、本人が**公開を依頼したとき**だけ。エージェントが勝手に `true` にしない。
+- 公開・再公開の手順（check → commit → push）は `skills/article-publish/SKILL.md` に従う。
 
 ---
 
@@ -242,10 +295,11 @@ published: false        # 完成し確認するまでは false
 3. 既存記事（特に基準サンプル2本）の呼吸に合わせて書く。
 4. 主張を書いたら、必ず「言い過ぎていないか」を自分でチェックする（2.1）。
 5. コード・コマンド・数値は、可能なら**実際に動かして**裏を取る。動かせないものは「未検証」と分かるように書く。
-6. 画像プレースホルダは `/images/...` で置き、実ファイルが要ることをユーザーに伝える。
+6. 画像は `/images/...` に置き、Markdown では `![alt](/images/...)` を使う。実ファイルが要ることをユーザーに伝える。
 7. **記事用デモ**を作る場合は 5.8 のルールに従う（`/Users/m_m/develop/9999_m2lab/` 配下 + `masanori0209` GitHub 公開）。
-8. 公開前に `npm run check:articles -- articles/対象記事.md` を実行し、frontmatter・画像・Zenn 記法・文体 warning を確認する。AI 臭の機械チェックは `npm run check:ai-smell -- articles/対象記事.md`（ルールは `article-ai-smell.rules.json`）。外部リンクは必要なときだけ `npm run check:articles:network -- articles/対象記事.md` で確認する。新規記事や公開直前は `node scripts/check-articles.mjs --strict articles/対象記事.md` と `npm run check:ai-smell:strict -- articles/対象記事.md` も使う。
-9. 完成しても `published: false` のまま。プレビューは `npx zenn preview`。
+8. 公開前に `npm run check:articles -- articles/対象記事.md` を実行し、frontmatter・画像・Zenn 記法を確認する。AI 臭は `npm run check:ai-smell -- articles/対象記事.md`。外部リンクは必要なときだけ `npm run check:articles:network -- articles/対象記事.md`。初回公開前は `--strict` も使ってよいが、**warn だけではブロックしない**。
+9. 下書きは `published: false` のまま。プレビューは `npx zenn preview`。
+10. **公開はユーザー依頼時のみ** `skills/article-publish/SKILL.md` を読んで実行する（commit / push も依頼がなければしない）。
 
 ---
 
@@ -255,5 +309,6 @@ published: false        # 完成し確認するまでは false
 - AI 臭い定型文、空の締め、水増し段落。
 - 本文への絵文字の散らかし（モードB見出しを除く）。
 - 捏造した出力・数値・ベンチ結果。
-- 無断で `published: true` にする。
+- 無断で `published: true` にする、または依頼なしで commit / push する。
+- 成果物（記事・books）にメタ情報・編集ナレーション・チャットの写しを入れる（§5.10）。`<!-- evidence: ... -->` だけは例外。
 - Slack のビジネス敬語（「〜いただけますと幸いです」等）を記事にそのまま持ち込む。あれは社内向けの声で、記事の声とは別。

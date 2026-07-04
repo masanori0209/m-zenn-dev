@@ -10,19 +10,29 @@
 - [`AGENTS.md`](./AGENTS.md) … 文体ガイド本体（唯一の正）。Cursor / Codex が参照します。
 - [`CLAUDE.md`](./CLAUDE.md) … Claude Code 用の入口。`@AGENTS.md` で本体を読み込みます。
 - [`.cursor/rules/zenn-writing-style.mdc`](./.cursor/rules/zenn-writing-style.mdc) … Cursor 用ルール。`articles/` `books/` の Markdown を編集すると適用されます。
+- [`.cursor/rules/no-meta-in-articles.mdc`](./.cursor/rules/no-meta-in-articles.mdc) … 成果物へのメタ情報混入を防ぐ（`<!-- evidence: ... -->` は例外）。
+- [`.cursor/rules/article-publish.mdc`](./.cursor/rules/article-publish.mdc) … 公開・再公開を依頼したときに適用されます。
 - [`skills/article-ideation/SKILL.md`](./skills/article-ideation/SKILL.md) … 記事アイデア出し用の共有 skill。タイトル案、切り口、構成の種出しで使います。
+- [`skills/article-publish/SKILL.md`](./skills/article-publish/SKILL.md) … 公開・再公開用（check → commit → push）。**ユーザーが明示したときだけ**使います。
 
 文体を変えたいときは、まず `AGENTS.md` を編集してください。
 
 `CODEX.md` / `codex.md` は置いていません。Codex 向けの共有ルールは `AGENTS.md` に集約します。
 
-Agent Skills / `SKILL.md` は、文体ルールではなく繰り返し使う作業手順ができたときに追加します。今回の `article-ideation` もその扱いです。文体の正は `AGENTS.md` のままにします。
+Agent Skills / `SKILL.md` は、文体ルールではなく繰り返し使う作業手順ができたときに追加します。`article-ideation`（種出し）と `article-publish`（公開）がその扱いです。文体の正は `AGENTS.md` のままにします。
 
 記事アイデア出しを頼むときは、各ツールで次のように呼び出せます。
 
 ```text
 Use $article-ideation to turn recent work into Zenn article ideas.
 記事のアイデア出しをしたいので、skills/article-ideation/SKILL.md を使ってください。
+```
+
+公開・再公開を頼むとき:
+
+```text
+Use $article-publish to publish articles/cobol-webfw-nextjs-django.md
+公開して / 公開し直して
 ```
 
 ## 公開前チェック
@@ -81,11 +91,13 @@ ignore ルールは次の形です。`path` は `*` / `**` が使えますが、
 
 ローカル画像は Zenn の GitHub 連携ルールに合わせて `/images` 配下に置きます。対応拡張子は `.png` `.jpg` `.jpeg` `.gif` `.webp`、ファイルサイズは 3MB 以内です。ローカル `.mp4` は `/images` 配下に置かず、必要なら YouTube など外部埋め込みに逃がします。
 
-ベンチ・数字・「速い」系の主張を書くときは、近くに単行 HTML コメントで根拠を残します。
+ベンチ・数字・「速い」系の主張を書くときは、近くに単行 HTML コメントで根拠を残す（**Zenn 上は非表示**なので公開後も残してよい）。
 
 ```markdown
 <!-- evidence: command="npm run bench"; log="reports/bench-2026-07-01.md" -->
 ```
+
+成果物へのメタ情報（編集ナレーション・`NOTE:`・evidence 以外の HTML コメント）は `AGENTS.md` §5.10 と `content.meta.*` warn で検知する。
 
 pre-push でも published 差分 strict を走らせたい場合は、次を一度だけ実行します。
 

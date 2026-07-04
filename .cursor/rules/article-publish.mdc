@@ -1,0 +1,18 @@
+---
+description: Zenn記事の公開・再公開を依頼されたとき。check→commit→push の手順を走らせる。
+alwaysApply: false
+---
+
+# Zenn 記事公開
+
+ユーザーが **公開・再公開・push して反映** を明示したときだけ使う。ドラフト執筆やアイデア出しでは使わない。
+
+@AGENTS.md
+@skills/article-publish/SKILL.md
+
+Cursor では特に次を守る。
+
+- `published: true` にするのは、ユーザーが公開を依頼したときだけ。
+- 依頼がなければ commit / push しない。
+- 公開前に `npm run check:articles` を走らせ、error 0 を確認する。
+- 記事がデモ repo を参照しているなら、可能なら `run-all.sh` 等で動作確認してから push する。

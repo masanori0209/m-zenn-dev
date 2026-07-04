@@ -87,13 +87,15 @@ Create 2-3 title variants for the top idea:
 
 ## Evidence Notes
 
-When an idea includes numbers, benchmarks, "fast", "accurate", "reduced", "improved", or similar claims, require evidence before drafting:
+When an idea includes numbers, benchmarks, "fast", "accurate", "reduced", "improved", or similar claims, note what command or log would back them up before drafting:
 
 ```markdown
 <!-- evidence: command="..."; log="..." -->
 ```
 
-If evidence does not exist yet, say what to run or capture. Do not invent results.
+If evidence does not exist yet, say what to run or capture. Do not invent results. Put evidence in `<!-- evidence: ... -->` near numeric claims (invisible on Zenn; OK to keep after publish).
+
+Do not put edit narration, chat replies, or internal labels in the article body. See `AGENTS.md` §5.10.
 
 ## Draft Handoff
 
@@ -104,3 +106,5 @@ If the user asks to proceed from idea to outline or draft:
 3. Put the demo or proof artifact early when available.
 4. Include a scope message and a limits section.
 5. Run `npm run check:articles -- articles/対象記事.md` after creating or editing a draft.
+
+If the user asks to publish, switch to `skills/article-publish/SKILL.md` instead of finishing here.

@@ -851,6 +851,10 @@ function scanBody(file, body, bodyStartLine, data) {
       evidenceLines.push(lineNumber);
     }
 
+    if (!inCodeFence) {
+      checkMetaInDeliverableLine(file, lineNumber, line);
+    }
+
     if (looksLikeEvidenceNeedingClaim(line)) {
       claimLines.push({ line: lineNumber, text: trimmed });
     }
@@ -1217,6 +1221,66 @@ function checkEvidenceClaims(file, claimLines, evidenceLines) {
         'numeric/performance claim should have a nearby evidence comment: <!-- evidence: command="..." log="..." -->',
         "content.evidence",
       );
+    }
+  }
+}
+
+const META_IN_DELIVERABLE_PATTERNS = [
+  {
+    code: "content.meta.edit_narration",
+    regex: /この(記事|節|章|段落|セクション).*?(更新|修正|追記|変更)しました/,
+    message: "edit narration in article body; write reader-facing facts only",
+  },
+  {
+    code: "content.meta.edit_narration",
+    regex: /以下のとおり(修正|変更|追記|更新)/,
+    message: "edit narration in article body; do not report the edit process",
+  },
+  {
+    code: "content.meta.prompt_echo",
+    regex: /依頼(?:どおり|に従い|に沿って)/,
+    message: "prompt/instruction echo in article body",
+  },
+  {
+    code: "content.meta.prompt_echo",
+    regex: /プロンプト(?:どおり|に従)/,
+    message: "prompt/instruction echo in article body",
+  },
+  {
+    code: "content.meta.internal_label",
+    regex: /^(NOTE|Agent memo|Agent|エージェント向け)\s*[:：]/i,
+    message: "internal agent label in article body",
+  },
+  {
+    code: "content.meta.internal_label",
+    regex: /^\*\*(NOTE|TODO|FIXME)\*\*\s*[:：]/i,
+    message: "internal label in article body",
+  },
+];
+
+function checkMetaInDeliverableLine(file, lineNumber, line) {
+  const trimmed = line.trim();
+  if (trimmed === "") {
+    return;
+  }
+
+  if (/<!--/.test(line)) {
+    if (!/<!--\s*evidence\s*:/i.test(line)) {
+      addIssue(
+        "warn",
+        file,
+        lineNumber,
+        "HTML comment in article body; only <!-- evidence: ... --> is allowed (invisible on Zenn)",
+        "content.meta.html_comment",
+      );
+    }
+    return;
+  }
+
+  for (const pattern of META_IN_DELIVERABLE_PATTERNS) {
+    if (pattern.regex.test(trimmed)) {
+      addIssue("warn", file, lineNumber, pattern.message, pattern.code);
+      return;
     }
   }
 }
