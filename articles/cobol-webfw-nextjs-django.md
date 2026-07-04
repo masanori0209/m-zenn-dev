@@ -1,5 +1,5 @@
 ---
-title: "Next.jsの行数を測ったら、DjangoっぽいミニWebFWになっていた——GnuCOBOL + CGI"
+title: COBOLでNext.jsの実装コストを測っていたら、DjangoっぽいミニWebFWになっていた
 emoji: "🦕"
 type: "tech"
 topics: ["cobol", "django", "nextjs", "ssr", "webframework"]
