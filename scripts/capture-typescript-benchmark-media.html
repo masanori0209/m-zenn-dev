@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Benchmark Results</title>
+    <style>
+      body {
+        font-family: "Segoe UI", system-ui, sans-serif;
+        background: #f8fafc;
+        color: #0f172a;
+        padding: 32px;
+        margin: 0;
+      }
+      h1 {
+        font-size: 20px;
+        margin: 0 0 8px;
+      }
+      p {
+        color: #64748b;
+        margin: 0 0 20px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      th,
+      td {
+        padding: 12px 16px;
+        border-bottom: 1px solid #e2e8f0;
+        text-align: left;
+      }
+      th {
+        background: #eff6ff;
+      }
+      td.num {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+      tr:last-child td {
+        border-bottom: none;
+      }
+      .highlight {
+        background: #ecfdf5;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>TypeScript 5.9 / 6.0 / 7.0 横断ベンチ（warm）</h1>
+    <p>typescript-toolchain-bench / macOS Apple Silicon / Node v26.0.0 / 2026-07-09</p>
+    <table>
+      <thead>
+        <tr>
+          <th>バージョン</th>
+          <th>Total time</th>
+          <th>Check time</th>
+          <th>Memory used</th>
+          <th>Max RSS</th>
+          <th>5.9 比</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>5.9.3</td>
+          <td class="num">0.42s</td>
+          <td class="num">0.24s</td>
+          <td class="num">151,969K</td>
+          <td class="num">272MB</td>
+          <td class="num">1.0x</td>
+        </tr>
+        <tr>
+          <td>6.0.3</td>
+          <td class="num">0.37s</td>
+          <td class="num">0.21s</td>
+          <td class="num">131,310K</td>
+          <td class="num">245MB</td>
+          <td class="num">1.1x</td>
+        </tr>
+        <tr class="highlight">
+          <td>7.0.2</td>
+          <td class="num">0.052s</td>
+          <td class="num">0.033s</td>
+          <td class="num">62,861K</td>
+          <td class="num">97MB</td>
+          <td class="num">8.1x</td>
+        </tr>
+      </tbody>
+    </table>
+  </body>
+</html>
