@@ -1,5 +1,5 @@
 ---
-title: "Rust + Tauri で古い Mac 風のシステムモニタを作ったら、温度は取れてメモリの読み方が本編だった"
+title: "Rust + Tauri で古い Mac 風のシステムモニタを作ってみた"
 emoji: "🌡️"
 type: "tech"
 topics: ["rust", "tauri", "sysinfo", "desktop", "react"]
