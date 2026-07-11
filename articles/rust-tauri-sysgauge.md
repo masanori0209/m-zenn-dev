@@ -122,7 +122,26 @@ impl MonitorState {
 let components = Components::new_with_refreshed_list();
 ```
 
-手元では `PMU tdie*` や `gas gauge battery` のようなセンサーで ℃ が出ました。UI では `tdie` / `battery` だけに絞り、値があるものを最大 4 件出しています（1 画面に収めるため。`tdev` などには絶対温度として使えない値が混ざることがあるため除外しています）。
+手元では `PMU tdie*` や `gas gauge battery` のようなセンサーで ℃ が出ました。ただし全部を出すと、`tdev` のように絶対温度として使えない値が混ざります（マイナス表記など）。なのでラベルで絞っています。
+
+```rust
+fn is_preferred_thermal_label(label: &str) -> bool {
+    let lower = label.to_ascii_lowercase();
+    lower.contains("tdie") || lower.contains("battery")
+}
+
+let sensors: Vec<ThermalSensor> = components
+    .iter()
+    .filter(|c| is_preferred_thermal_label(c.label()))
+    .map(|c| ThermalSensor {
+        label: c.label().to_string(),
+        celsius: c.temperature(),
+        max_celsius: c.max(),
+    })
+    .collect();
+```
+
+UI ではこの一覧から最大 4 件だけ出しています。`battery` があれば先に出し、あとは温度の高い `tdie` から並べています。
 
 ステータスは次の 3 つに分けています。
 
@@ -135,12 +154,24 @@ let components = Components::new_with_refreshed_list();
 今回のスクショは `available` 寄りの状態です。ただし次は残ります。
 
 - ラベルが人間向けの「CPU」ではないことが多い
-- センサー全部を出すと、絶対温度として使えないチャンネルが混ざる（なので `tdie` / `battery` に限定）
 - Windows や別マシンでは空になる可能性がある
 
 <!-- evidence: command="npm run tauri dev"; log="images/sysgauge-dashboard.png" -->
 
 なので「温度対応した」ではなく、**この環境では `Components` で温度が取れた**、が正確です。取れない環境では `No sensors` を出すだけにして、アプリ全体は止めません。
+
+フロントからは、だいたい次の形で Rust 側を呼びます。
+
+```rust
+#[tauri::command]
+fn get_metrics(state: tauri::State<'_, MonitorState>) -> MetricsSnapshot {
+    state.snapshot()
+}
+```
+
+```ts
+const next = await invoke<MetricsSnapshot>("get_metrics");
+```
 
 :::message
 Windows で温度を厚くしたい場合は、WMI やベンダー SDK など別経路が必要になることがあります。この記事では共通クレートの範囲に留めています。
